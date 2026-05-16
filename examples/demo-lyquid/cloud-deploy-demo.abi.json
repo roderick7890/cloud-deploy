@@ -1,0 +1,50 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      {
+        "name": "greeting",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "compileProject",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "sourceHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "artifactHash",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "publishProject",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      {
+        "name": "reviewPayload",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "lyquidId",
+        "type": "string",
+        "internalType": "string"
+      }
+    ]
+  }
+]
