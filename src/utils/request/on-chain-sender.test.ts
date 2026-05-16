@@ -88,8 +88,8 @@ describe("on-chain-sender", () => {
       transaction: {
         input: "0xfeed"
       },
-      deployAbi: expect.objectContaining({
-        name: "deploy"
+      submittedTransaction: expect.objectContaining({
+        calldata: expect.stringMatching(/^0x/)
       })
     });
 

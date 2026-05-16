@@ -7,7 +7,7 @@ export function shortHash(value: string | undefined) {
     return value;
   }
 
-  return `${value.slice(0, 6)}...${value.slice(-4)}`;
+  return `${value.slice(0, 8)}...${value.slice(-6)}`;
 }
 
 export function shortAddress(value: string | undefined) {

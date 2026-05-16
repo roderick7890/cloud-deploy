@@ -132,7 +132,7 @@ describe("shared components", () => {
       />
     );
 
-    expect(screen.getByText("0x1234...cdef")).toBeInTheDocument();
+    expect(screen.getByText("0x123456...abcdef")).toBeInTheDocument();
     expect(screen.queryByText("artifactHash")).not.toBeInTheDocument();
   });
 
@@ -146,7 +146,7 @@ describe("shared components", () => {
       />
     );
 
-    expect(container.querySelector('[data-json-scroll-content="true"]')).toHaveClass("overflow-x-auto");
+    expect(container.querySelector('[data-json-scroll-content="true"]')).not.toHaveClass("overflow-x-auto");
     expect(container.querySelector("pre")).toHaveClass("w-max", "min-w-full", "whitespace-pre");
   });
 
@@ -163,7 +163,7 @@ describe("shared components", () => {
       />
     );
 
-    expect(container.querySelector('[data-json-scroll-content="true"]')).toHaveClass("overflow-x-auto");
+    expect(container.querySelector('[data-json-scroll-content="true"]')).not.toHaveClass("overflow-x-auto");
     expect(container.querySelector("pre")).toHaveClass("w-max", "min-w-full", "whitespace-pre");
   });
 
@@ -206,7 +206,7 @@ describe("shared components", () => {
     expect(screen.getByText("31337")).toBeInTheDocument();
     expect(screen.getByText("Calldata")).toBeInTheDocument();
     expect(screen.getAllByText("0xabcdef").length).toBeGreaterThan(0);
-    expect(screen.getByText("Deploy ABI")).toBeInTheDocument();
+    expect(screen.getByText("Contract ABI")).toBeInTheDocument();
     expect(screen.getAllByText(/"name": "deploy"/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole("button", { name: "Copy ABI" }));
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('"name": "deploy"'));

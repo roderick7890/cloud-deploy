@@ -90,7 +90,6 @@ export async function sendOnChainMethod({ method, args, context }: MethodSenderI
     transaction,
     transactionLookupPending: transaction === null,
     transactionLookupError,
-    deployAbi: method.abiItem,
     submittedTransaction: {
       from: context.accountAddress,
       to: contractAddress,

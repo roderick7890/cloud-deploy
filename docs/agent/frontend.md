@@ -235,7 +235,6 @@ Use this map when choosing shadcn/ui primitives.
 | `Progress` | Build or deploy progress indicators | `value` |
 | `Badge` | Compact status, transport, or method tags | `variant` |
 | `Separator` | Dividing settings or review sections | `orientation` |
-| `ScrollArea` | Long ABI JSON, logs, or payload panels inside fixed-height areas | `className` |
 | `Tooltip` | Icon-only buttons and compact technical hints | `delayDuration`, trigger content |
 | `Toast` / `Sonner` | Non-blocking success/error messages | message, description, action |
 

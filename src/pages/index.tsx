@@ -169,7 +169,7 @@ export default function HomePage() {
       }
 
       const reviewPayload = buildCache?.targetFile === selectedTomlPath ? buildCache.reviewPayload : await runBuild({ silent: true });
-      const { args } = prepareDeployMethodCall({ buildMethod, deployMethod, project: currentProject, reviewPayload });
+      const { args, deployAbi } = prepareDeployMethodCall({ buildMethod, deployMethod, project: currentProject, reviewPayload });
       const raw = await dispatchSelectedMethod({
         parsedAbi: settings.parsedAbi,
         selectedMethod: settings.deployMethod,
@@ -182,10 +182,11 @@ export default function HomePage() {
           offChainFetch: (input, init) => fetch(input, init)
         }
       });
+      const displayRaw = isRecord(raw) ? { ...raw, ...(deployAbi ? { deployAbi } : {}) } : raw;
       const txHash = getTxHash(raw);
       const transactionRaw = isRecord(raw) && isRecord(raw.transaction) ? raw.transaction : undefined;
 
-      patchTab(tabId, { status: transactionRaw ? "success" : "loading", raw, transactionRaw });
+      patchTab(tabId, { status: transactionRaw ? "success" : "loading", raw: displayRaw, transactionRaw });
       if (txHash) {
         addDeployHistory({ id: `${txHash}:${now}`, txHash: txHash as `0x${string}`, timestamp: now, targetFile: selectedTomlPath, status: "submitted", env });
       }
@@ -287,7 +288,7 @@ export default function HomePage() {
               onCloseTab={closeTab}
               renderTabContent={(tab) =>
                 tab.kind === "file-detail" && currentProject ? (
-                  <FileDetailTab path={tab.targetFile ?? ""} files={currentProject.files} tomlFiles={currentProject.tomlFiles} />
+                  <FileDetailTab onDeploy={() => void runDeploy()} path={tab.targetFile ?? ""} files={currentProject.files} tomlFiles={currentProject.tomlFiles} />
                 ) : (
                   <RunOutputTab tab={tab} />
                 )

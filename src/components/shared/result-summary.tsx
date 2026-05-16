@@ -3,7 +3,6 @@ import { CheckCircle2, Copy, Loader2 } from "lucide-react";
 import type { DeployResult } from "@/types/deploy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatStatus, shortHash } from "@/utils/format-utils";
 
 type ResultSummaryProps = {
@@ -95,11 +94,11 @@ function CalldataItem({ value }: { value?: string }) {
     <DetailItem label="Calldata">
       <div className="space-y-2">
         {expanded && isLong ? (
-          <ScrollArea className="max-h-48 w-full max-w-full rounded-md border bg-background">
-            <div data-calldata-scroll-content="true" className="w-full max-w-full overflow-x-auto p-3">
+          <div className="max-h-48 w-full max-w-full overflow-auto rounded-md border bg-background">
+            <div data-calldata-scroll-content="true" className="w-full max-w-full p-3">
               <pre className="w-max min-w-full whitespace-pre text-sm">{displayValue}</pre>
             </div>
-          </ScrollArea>
+          </div>
         ) : (
           <p className="break-all font-mono text-sm">{displayValue}</p>
         )}
@@ -129,11 +128,11 @@ export function ResultSummary({ result }: ResultSummaryProps) {
         {result.lyquidId ? <Badge variant="outline">{result.lyquidId}</Badge> : null}
         {result.signedPayloadHash ? <Badge variant="outline">{shortHash(result.signedPayloadHash)}</Badge> : null}
       </div>
-      <ScrollArea className="h-48 w-full max-w-full rounded-md border bg-card">
-        <div data-json-scroll-content="true" className="w-full max-w-full overflow-x-auto p-4">
+      <div className="h-48 w-full max-w-full overflow-auto rounded-md border bg-card">
+        <div data-json-scroll-content="true" className="w-full max-w-full p-4">
           <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(result.raw, null, 2)}</pre>
         </div>
-      </ScrollArea>
+      </div>
       {deployDetails ? (
         <div className="grid gap-4 lg:grid-cols-2">
           <section className={deployAbiJson ? "space-y-4 rounded-md border bg-card p-4" : "space-y-4 rounded-md border bg-card p-4 lg:col-span-2"}>
@@ -156,17 +155,17 @@ export function ResultSummary({ result }: ResultSummaryProps) {
           {deployAbiJson ? (
             <section className="space-y-4 rounded-md border bg-card p-4">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold">Deploy ABI</h2>
+                <h2 className="text-base font-semibold">Contract ABI</h2>
                 <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(deployAbiJson)}>
                   <Copy />
                   Copy ABI
                 </Button>
               </div>
-              <ScrollArea className="h-64 w-full max-w-full rounded-md border bg-background">
-                <div className="w-full max-w-full overflow-x-auto p-4">
+              <div className="h-full w-full max-w-full overflow-auto rounded-md border bg-background">
+                <div className="w-full max-w-full p-4">
                   <pre className="w-max min-w-full whitespace-pre text-sm">{deployAbiJson}</pre>
                 </div>
-              </ScrollArea>
+              </div>
             </section>
           ) : null}
         </div>

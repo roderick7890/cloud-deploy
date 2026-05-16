@@ -3,9 +3,10 @@ import { CheckCircle2, Copy, Info, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WorkbenchTab } from "@/types/workbench";
 import { formatStatus } from "@/utils/format-utils";
+
+const showRawOut = true;
 
 type RunOutputTabProps = {
   tab: WorkbenchTab;
@@ -31,9 +32,9 @@ function getDeployAbi(raw: unknown) {
   return isRecord(raw) && raw.deployAbi ? raw.deployAbi : null;
 }
 
-function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Section({ title, action, children, className = "" }: { title: string; action?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className="space-y-3 rounded-md border bg-card p-4">
+    <section data-run-output-section="true" className={`space-y-3 rounded-md flex flex-col ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">{title}</h2>
         {action}
@@ -45,11 +46,11 @@ function Section({ title, action, children }: { title: string; action?: ReactNod
 
 function JsonScroll({ value }: { value: unknown }) {
   return (
-    <ScrollArea className="h-64 w-full max-w-full rounded-md border bg-background">
-      <div className="w-full max-w-full overflow-x-auto p-4">
+    <div className="flex-1 w-full max-w-full overflow-auto rounded-md border bg-background">
+      <div data-json-scroll-content="true" className="w-full max-w-full p-4 h-80">
         <pre className="w-max min-w-full whitespace-pre text-sm">{jsonText(value)}</pre>
       </div>
-    </ScrollArea>
+    </div>
   );
 }
 
@@ -58,11 +59,10 @@ export function RunOutputTab({ tab }: RunOutputTabProps) {
   const txHash = getTxHash(tab);
   const txFound = Boolean(tab.transactionRaw);
   const txPending = Boolean(txHash && !txFound && tab.status === "loading");
-  const abiItem = tab.kind === "deploy-run" ? tab.env?.deployMethodAbiItem : tab.env?.buildMethodAbiItem;
   const deployAbi = getDeployAbi(tab.raw);
 
   return (
-    <div className="space-y-4">
+    <div data-run-output-root="true" className="flex min-h-full flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {tab.status ? <Badge>{formatStatus(tab.status)}</Badge> : null}
@@ -83,49 +83,41 @@ export function RunOutputTab({ tab }: RunOutputTabProps) {
 
       {tab.error ? <p className="rounded-md border border-destructive bg-background p-3 text-sm text-destructive">{tab.error}</p> : null}
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <Section
-          title="Raw Output"
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(tab.raw))}>
-              <Copy className="h-4 w-4" />
-              Copy Raw
-            </Button>
-          }
-        >
-          <JsonScroll value={tab.raw} />
-        </Section>
+      <div data-run-output-main="true" className="grid flex-1 gap-4 xl:grid-cols-2">
+        {showRawOut ?
+          <Section
+            title="Raw Output"
+            className="min-h-full"
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(tab.raw))}>
+                <Copy className="h-4 w-4" />
+                Copy Raw
+              </Button>
+            }
+          >
+            <JsonScroll value={tab.raw} />
+          </Section>
+          : null}
 
-        <Section
-          title="ABI Item"
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(abiItem))}>
-              <Copy className="h-4 w-4" />
-              Copy ABI
-            </Button>
-          }
-        >
-          <JsonScroll value={abiItem} />
-        </Section>
+        {deployAbi ? (
+          <Section
+            title="Contract ABI"
+            className="min-h-full"
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(deployAbi))}>
+                <Copy className="h-4 w-4" />
+                Copy Contract ABI
+              </Button>
+            }
+          >
+            <JsonScroll value={deployAbi} />
+          </Section>
+        ) : null}
       </div>
 
       {tab.transactionRaw ? (
         <Section title="Transaction Details">
           <JsonScroll value={tab.transactionRaw} />
-        </Section>
-      ) : null}
-
-      {deployAbi ? (
-        <Section
-          title="Deploy ABI"
-          action={
-            <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(deployAbi))}>
-              <Copy className="h-4 w-4" />
-              Copy Deploy ABI
-            </Button>
-          }
-        >
-          <JsonScroll value={deployAbi} />
         </Section>
       ) : null}
 

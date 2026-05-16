@@ -64,6 +64,22 @@ function findOutput(outputs: BuildOutputValue[], input: AbiParameter) {
   return undefined;
 }
 
+function findAbiOutput(outputs: BuildOutputValue[]) {
+  return outputs.find((output) => output.type === "string" && /abi/.test(output.name.toLowerCase()))?.value;
+}
+
+function parseAbiOutput(value: unknown) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
 function unsupportedInput(input: AbiParameter, index: number) {
   const name = input.name || `arg${index}`;
   return new Error(`Deploy method input ${name}:${input.type} cannot be prepared from the build result.`);
@@ -104,5 +120,8 @@ export function prepareDeployMethodCall({ buildMethod, deployMethod, project, re
     throw unsupportedInput(input, index);
   });
 
-  return { args };
+  return {
+    args,
+    deployAbi: parseAbiOutput(findAbiOutput(outputs))
+  };
 }

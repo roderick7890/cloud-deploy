@@ -14,7 +14,7 @@ export function ActionDeck({ selectedTomlPath, isBuilding, isDeploying, onBuild,
   const targetLabel = selectedTomlPath || "No TOML target selected";
 
   return (
-    <div className="grid h-full min-h-0 gap-4 p-4 md:grid-cols-2">
+    <div className="flex h-full min-h-0 gap-4 p-4 [&_section]:w-60">
       <section className="flex min-h-0 flex-col justify-between gap-4 rounded-md border bg-background p-4">
         <div className="space-y-2">
           <div className="flex items-center gap-2">

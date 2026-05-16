@@ -5,7 +5,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { analyzeProjectFiles } from "@/utils/file-utils";
 
@@ -81,7 +80,7 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
             <p className="mt-1 text-sm text-muted-foreground">
               {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes
             </p>
-            <ScrollArea className="mt-4 h-80 rounded-md border p-2">
+            <div className="mt-4 h-80 overflow-auto rounded-md border p-2">
               <ProjectTree
                 key={`${project.rootName}:${project.metadata.fileCount}:${project.metadata.totalSize}:${sourceOnly}`}
                 nodes={project.tree}
@@ -89,7 +88,7 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
                 sourceOnly={sourceOnly}
                 onSelectPath={handleSelectPath}
               />
-            </ScrollArea>
+            </div>
           </div>
 
           <div className="rounded-md border bg-card p-4">

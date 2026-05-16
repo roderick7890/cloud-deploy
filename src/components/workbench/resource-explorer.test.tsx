@@ -52,6 +52,20 @@ describe("ResourceExplorer", () => {
     await waitFor(() => expect(onProjectChange).toHaveBeenCalledWith(expect.objectContaining({ selectedTomlPath: "" })));
   });
 
+  it("keeps the hidden folder input inside the visible upload target", () => {
+    renderWithProviders(
+      <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+    );
+
+    const input = screen.getByLabelText("Drop a folder here or choose one.");
+    const uploadTarget = input.closest("label");
+
+    expect(uploadTarget).toBeInTheDocument();
+    expect(uploadTarget).toContainElement(input);
+    expect(uploadTarget).toHaveClass("relative");
+    expect(input).toHaveClass("absolute", "inset-0");
+  });
+
   it("shows a compact change-folder action after a project exists", () => {
     renderWithProviders(
       <ResourceExplorer project={uploadedProject()} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />

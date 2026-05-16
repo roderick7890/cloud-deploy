@@ -1,9 +1,7 @@
 import { Clock3, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DeployHistoryRecord } from "@/types/workbench";
-import { formatStatus, shortHash } from "@/utils/format-utils";
+import { shortHash } from "@/utils/format-utils";
 
 type DeployHistoryPanelProps = {
   records: DeployHistoryRecord[];
@@ -20,7 +18,6 @@ export function DeployHistoryPanel({ records, onOpenRecord, onDeleteRecord }: De
     <div className="flex h-full min-h-0 flex-col gap-3 p-3">
       <div>
         <h2 className="font-medium">Latest 10 deploys</h2>
-        <p className="text-sm text-muted-foreground">Stored by tx hash only; details are fetched from the saved RPC when opened.</p>
       </div>
 
       {records.length === 0 ? (
@@ -28,10 +25,10 @@ export function DeployHistoryPanel({ records, onOpenRecord, onDeleteRecord }: De
           <p>No deploy history yet.</p>
         </div>
       ) : (
-        <ScrollArea className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1">
           <div className="space-y-2">
             {records.map((record) => (
-              <div key={record.id} className="flex items-start gap-2 rounded-md border bg-background p-2">
+              <div key={record.id} className="flex items-center gap-2 rounded-md">
                 <Button
                   type="button"
                   variant="ghost"
@@ -41,10 +38,9 @@ export function DeployHistoryPanel({ records, onOpenRecord, onDeleteRecord }: De
                 >
                   <div className="min-w-0 space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">{formatStatus(record.status)}</Badge>
                       <span className="font-mono text-sm">{shortHash(record.txHash)}</span>
                     </div>
-                    <p className="truncate text-sm font-medium">{record.targetFile}</p>
+                    {/* <p className="truncate text-sm font-medium">{record.targetFile}</p> */}
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Clock3 className="h-3 w-3" />
                       <span>{formatTimestamp(record.timestamp)}</span>
@@ -63,7 +59,7 @@ export function DeployHistoryPanel({ records, onOpenRecord, onDeleteRecord }: De
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
       )}
     </div>
   );

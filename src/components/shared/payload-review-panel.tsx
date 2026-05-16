@@ -1,6 +1,5 @@
 import type { DeploymentHashes } from "@/types/deploy";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { shortHash } from "@/utils/format-utils";
 
 type PayloadReviewPanelProps = {
@@ -30,11 +29,11 @@ export function PayloadReviewPanel({ hashes, payload, onCopy, onDownload }: Payl
             </div>
           ))}
       </div>
-      <ScrollArea className="h-64 w-full max-w-full rounded-md border bg-card">
-        <div data-json-scroll-content="true" className="w-full max-w-full overflow-x-auto p-4">
+      <div className="h-64 w-full max-w-full overflow-auto rounded-md border bg-card">
+        <div data-json-scroll-content="true" className="w-full max-w-full p-4">
           <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(payload, null, 2)}</pre>
         </div>
-      </ScrollArea>
+      </div>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCopy}>
           Copy JSON

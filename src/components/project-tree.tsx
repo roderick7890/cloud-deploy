@@ -86,13 +86,13 @@ function ProjectTreeNodes({
   fileActionLabel: "Open" | "Select";
 }) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 h-full">
       {nodes.map((node) => {
         if (node.type === "directory") {
           const isExpanded = expandedPaths.has(node.path);
 
           return (
-            <div key={node.path} className="space-y-1">
+            <div key={node.path} className="space-y-1 h-full">
               <Button
                 type="button"
                 variant="ghost"
@@ -139,7 +139,7 @@ function ProjectTreeNodes({
               variant="ghost"
               className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1 text-left"
               aria-label={`${fileActionLabel} ${node.path}`}
-              onClick={() => onSelectPath(node.path)}
+              onClick={() => {onSelectPath(node.path); if(showTargetSelector && node.name.endsWith(".toml")){onSelectTarget(node.path)}}}
             >
               {node.name.endsWith(".toml") ? <FileText className="h-4 w-4" /> : <File className="h-4 w-4" />}
               <span className="truncate">{node.name}</span>
@@ -178,7 +178,7 @@ export function ProjectTree({
   };
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 h-full">
       <ProjectTreeNodes
         nodes={visibleNodes}
         expandedPaths={expandedPaths}

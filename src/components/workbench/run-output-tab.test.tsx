@@ -22,21 +22,17 @@ const baseTab: WorkbenchTab = {
 };
 
 describe("RunOutputTab", () => {
-  it("renders raw-first output, ABI item, env dialog, and copy actions", async () => {
+  it("keeps method ABI in the env dialog instead of the main output", async () => {
     const user = userEvent.setup();
-    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
     renderWithProviders(<RunOutputTab tab={baseTab} />);
 
-    expect(screen.getByText("Raw Output")).toBeInTheDocument();
-    expect(screen.getByText(/"result": "0x1234"/)).toBeInTheDocument();
-    expect(screen.getByText("ABI Item")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Copy Raw" }));
-    expect(writeText).toHaveBeenCalledWith(JSON.stringify(baseTab.raw, null, 2));
+    expect(screen.queryByText("ABI Item")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy ABI" })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Env" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText(/localhost:8545/)).toBeInTheDocument();
+    expect(screen.getByText(/"name": "build"/)).toBeInTheDocument();
   });
 
   it("shows a spinning tx hash while lookup is pending and check state after details arrive", () => {
@@ -68,7 +64,7 @@ describe("RunOutputTab", () => {
   it("renders deploy ABI from raw output as a separate copyable card", async () => {
     const user = userEvent.setup();
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
-    const deployAbi = { type: "function", name: "deploy", inputs: [{ name: "payload", type: "bytes" }] };
+    const deployAbi = [{ type: "function", name: "increment", inputs: [] }];
 
     renderWithProviders(
       <RunOutputTab
@@ -81,10 +77,33 @@ describe("RunOutputTab", () => {
       />
     );
 
-    expect(screen.getByText("Deploy ABI")).toBeInTheDocument();
-    expect(screen.getAllByText(/"name": "deploy"/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Contract ABI")).toBeInTheDocument();
+    expect(screen.getAllByText(/"name": "increment"/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/"name": "deploy"/)).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Copy Deploy ABI" }));
+    await user.click(screen.getByRole("button", { name: "Copy Contract ABI" }));
     expect(writeText).toHaveBeenCalledWith(JSON.stringify(deployAbi, null, 2));
+  });
+
+  it("lets the scroll area own long JSON overflow", () => {
+    const { container } = renderWithProviders(
+      <RunOutputTab
+        tab={{
+          ...baseTab,
+          raw: { result: "0x".padEnd(180, "a") }
+        }}
+      />
+    );
+
+    expect(container.querySelector('[data-json-scroll-content="true"]')).not.toHaveClass("overflow-x-auto");
+    expect(container.querySelector("pre")).toHaveClass("w-max", "min-w-full", "whitespace-pre");
+  });
+
+  it("stretches the visible output card area to the available tab height", () => {
+    const { container } = renderWithProviders(<RunOutputTab tab={{ ...baseTab, status: "error", error: "Deploy failed." }} />);
+
+    expect(container.querySelector('[data-run-output-root="true"]')).toHaveClass("min-h-full", "flex", "flex-col");
+    expect(container.querySelector('[data-run-output-main="true"]')).toHaveClass("flex-1");
+    expect(container.querySelector('[data-run-output-section="true"]')).toHaveClass("min-h-full");
   });
 });

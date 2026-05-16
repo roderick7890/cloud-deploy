@@ -1,14 +1,13 @@
 import { useState, type InputHTMLAttributes } from "react";
-import { FolderUp } from "lucide-react";
+import { ArrowLeftRight, Filter, FolderUp } from "lucide-react";
 import { ProjectTree } from "@/components/project-tree";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { UploadedProject } from "@/types/deploy";
 import { analyzeProjectFiles } from "@/utils/file-utils";
+import { cn } from "@/lib/utils";
 
 type ResourceExplorerProps = {
   project: UploadedProject | null;
@@ -37,20 +36,18 @@ function FolderInput({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <Label htmlFor={id} className={cn("relative overflow-hidden", className)}>
       <Input
         id={id}
         aria-label={label}
         type="file"
         multiple
-        className="absolute h-px w-px overflow-hidden opacity-0"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         {...directoryInputProps}
         onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
       />
-      <Label htmlFor={id} className={className}>
-        {children}
-      </Label>
-    </>
+      <span className="pointer-events-none contents">{children}</span>
+    </Label>
   );
 }
 
@@ -73,28 +70,37 @@ export function ResourceExplorer({ project, selectedTomlPath, onProjectChange, o
       {project ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <p className="truncate font-medium">{project.rootName}</p>
+            <div className=" w-full">
+              <div className="flex items-center justify-between">
+                <p className="truncate font-medium">{project.rootName}</p>
+
+                <div className="flex items-center">
+                  <FolderInput
+                    id="workbench-change-folder"
+                    label="Change folder"
+                    onFiles={(files) => void handleFiles(files)}
+                    className="inline-flex w-fit h-fit p-1 cursor-pointer items-center justify-center rounded-md hover:text-accent "
+                  >
+                    <ArrowLeftRight className="size-4" />
+                  </FolderInput>
+                  <Button
+                    className={cn("w-fit h-fit p-1 !bg-transparent hover:text-accent", tomlOnly ? "text-accent" : "")}
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Toml only"
+                    onClick={() => setTomlOnly((value) => !value)}
+                  >
+                    <Filter className="size-2.5" />
+                  </Button>
+                </div>
+              </div>
               <p className="text-sm text-muted-foreground">
-                {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes
+                {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes, {project.tomlFiles.length} TOML included
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{project.tomlFiles.length} TOML</Badge>
-              <FolderInput
-                id="workbench-change-folder"
-                label="Change folder"
-                onFiles={(files) => void handleFiles(files)}
-                className="inline-flex h-8 cursor-pointer items-center justify-center rounded-md border border-input bg-background px-3 text-xs font-medium shadow-sm hover:bg-accent hover:text-accent-foreground"
-              >
-                Change folder
-              </FolderInput>
-              <Button type="button" variant={tomlOnly ? "secondary" : "outline"} size="sm" onClick={() => setTomlOnly((value) => !value)}>
-                Toml only
-              </Button>
-            </div>
           </div>
-          <ScrollArea className="min-h-0 flex-1 rounded-md border p-2">
+          <div className="h-full flex-1 overflow-auto rounded-md">
             <ProjectTree
               key={`${project.rootName}:${project.metadata.fileCount}:${project.metadata.totalSize}:${tomlOnly}`}
               nodes={project.tree}
@@ -105,7 +111,7 @@ export function ResourceExplorer({ project, selectedTomlPath, onProjectChange, o
               showTargetSelector
               fileActionLabel="Open"
             />
-          </ScrollArea>
+          </div>
         </>
       ) : (
         <FolderInput

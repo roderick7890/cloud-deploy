@@ -56,4 +56,18 @@ describe("WorkbenchTabs", () => {
 
     expect(screen.getByText("No tabs open")).toBeInTheDocument();
   });
+
+  it("stretches active tab content to the scroll viewport height", () => {
+    const { container } = renderWithProviders(
+      <WorkbenchTabs
+        tabs={tabs}
+        activeTabId="file-demo"
+        onActiveTabChange={vi.fn()}
+        onCloseTab={vi.fn()}
+        renderTabContent={(tab) => <p>{tab.id} content</p>}
+      />
+    );
+
+    expect(container.querySelector('[data-workbench-tab-content="true"]')).toHaveClass("min-h-full");
+  });
 });

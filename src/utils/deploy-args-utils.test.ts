@@ -74,7 +74,7 @@ describe("deploy-args-utils", () => {
       payload: { jsonrpc: "2.0", id: "1", result: buildResult }
     };
 
-    const { args } = prepareDeployMethodCall({
+    const { args, deployAbi } = prepareDeployMethodCall({
       buildMethod,
       deployMethod,
       project: uploadedProject(),
@@ -89,5 +89,6 @@ describe("deploy-args-utils", () => {
       "[{\"type\":\"function\"}]",
       "examples/constructor-demo-lyquid/Cargo.toml"
     ]);
+    expect(deployAbi).toEqual([{ type: "function" }]);
   });
 });

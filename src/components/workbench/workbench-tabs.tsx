@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { WorkbenchTab } from "@/types/workbench";
 
 type WorkbenchTabsProps = {
@@ -55,9 +54,11 @@ export function WorkbenchTabs({ tabs, activeTabId, onActiveTabChange, onCloseTab
           );
         })}
       </div>
-      <ScrollArea className="min-h-0 flex-1">
-        <div className="p-4">{renderTabContent(activeTab)}</div>
-      </ScrollArea>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div data-workbench-tab-content="true" className="h-full p-4">
+          {renderTabContent(activeTab)}
+        </div>
+      </div>
     </div>
   );
 }
