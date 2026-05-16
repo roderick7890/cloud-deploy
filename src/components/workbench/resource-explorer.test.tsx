@@ -36,7 +36,7 @@ function uploadedProject(): UploadedProject {
 }
 
 describe("ResourceExplorer", () => {
-  it("uploads a folder and opens files without auto-selecting the TOML target", async () => {
+  it("uses the empty drop zone as the only upload control before a project exists", async () => {
     const user = userEvent.setup();
     const onProjectChange = vi.fn();
     const onOpenFile = vi.fn();
@@ -46,9 +46,18 @@ describe("ResourceExplorer", () => {
       <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={onProjectChange} onSelectTarget={vi.fn()} onOpenFile={onOpenFile} />
     );
 
-    await user.upload(screen.getByLabelText("Project folder"), files);
+    expect(screen.queryByText("Project folder")).not.toBeInTheDocument();
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), files);
 
     await waitFor(() => expect(onProjectChange).toHaveBeenCalledWith(expect.objectContaining({ selectedTomlPath: "" })));
+  });
+
+  it("shows a compact change-folder action after a project exists", () => {
+    renderWithProviders(
+      <ResourceExplorer project={uploadedProject()} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+    );
+
+    expect(screen.getByLabelText("Change folder")).toBeInTheDocument();
   });
 
   it("uses a radio control to select the TOML target without selected background semantics", async () => {
@@ -96,7 +105,7 @@ describe("ResourceExplorer", () => {
       <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
     );
 
-    await user.upload(screen.getByLabelText("Project folder"), files);
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), files);
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.getByText("No TOML build targets were found.")).toBeInTheDocument();
