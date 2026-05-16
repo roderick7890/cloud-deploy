@@ -92,7 +92,7 @@ The `Exports` column is a selection aid. The config module's actual exports are 
 | Config | Path | Status | Responsibility | Exports | Used By | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `app-config` | `src/config/app-config.ts` | active | App-level product constants | `appName` | Layout, metadata | No runtime state |
-| `routes-config` | `src/config/routes-config.ts` | active | Route paths and route labels | `routes` | Navigation, links | Keep Vite page entry composition consistent |
+| `routes-config` | `src/config/routes-config.ts` | active | Route paths and route labels | `routes` | Navigation, links | Includes `/` workbench and `/legacy` wizard paths; keep Vite page entry composition consistent |
 | `deploy-steps-config` | `src/config/deploy-steps-config.ts` | active | Upload, Build, Review, Deploy step definitions | `deploySteps` | `ProgressSteps`, pages | Do not duplicate step labels in components |
 | `storage-config` | `src/config/storage-config.ts` | active | Local storage keys and persisted store versions | `settingsStorageKey`, `settingsVersion`, `workbenchStorageKey`, `workbenchStorageVersion` | `settings-store`, `workbench-store` | Used by persisted stores only |
 | `upload-config` | `src/config/upload-config.ts` | active | Upload limits and accepted source inputs | `acceptedProjectFormats`, `maxUploadSize` | Upload step, `file-utils` | Folder-first upload; keep UI and file handling aligned |
