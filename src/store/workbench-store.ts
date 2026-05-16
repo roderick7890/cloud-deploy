@@ -9,6 +9,7 @@ type WorkbenchState = {
   deployHistory: DeployHistoryRecord[];
   setLayout: (layout: Partial<WorkbenchLayout>) => void;
   addDeployHistory: (record: DeployHistoryRecord) => void;
+  deleteDeployHistory: (recordId: string) => void;
   clearDeployHistory: () => void;
 };
 
@@ -27,6 +28,10 @@ export const useWorkbenchStore = create<WorkbenchState>()(
       addDeployHistory: (record) =>
         set((state) => ({
           deployHistory: [record, ...state.deployHistory.filter((item) => item.id !== record.id)].slice(0, deployHistoryLimit)
+        })),
+      deleteDeployHistory: (recordId) =>
+        set((state) => ({
+          deployHistory: state.deployHistory.filter((item) => item.id !== recordId)
         })),
       clearDeployHistory: () => set({ deployHistory: [] })
     }),

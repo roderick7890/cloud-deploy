@@ -44,6 +44,17 @@ describe("workbench-store", () => {
     expect(history[history.length - 1].id).toBe("history-2");
   });
 
+  it("deletes one deploy history record by id", () => {
+    useWorkbenchStore.getState().addDeployHistory(historyRecord(1));
+    useWorkbenchStore.getState().addDeployHistory(historyRecord(2));
+
+    useWorkbenchStore.getState().deleteDeployHistory("history-1");
+
+    const history = useWorkbenchStore.getState().deployHistory;
+    expect(history).toHaveLength(1);
+    expect(history[0].id).toBe("history-2");
+  });
+
   it("defaults to the configured layout", () => {
     expect(useWorkbenchStore.getState().layout).toEqual(defaultWorkbenchLayout);
   });

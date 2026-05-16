@@ -36,7 +36,7 @@ export default function HomePage() {
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
   const settings = useSettingsStore();
-  const { layout, setLayout, deployHistory, addDeployHistory } = useWorkbenchStore();
+  const { layout, setLayout, deployHistory, addDeployHistory, deleteDeployHistory } = useWorkbenchStore();
 
   const walletLabel = account.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "Connect Wallet";
   const connectWallet = () => connect({ connector: injected() });
@@ -278,7 +278,7 @@ export default function HomePage() {
               onOpenFile={openFileTab}
             />
           }
-          historyPane={<DeployHistoryPanel records={deployHistory} onOpenRecord={(record) => void openHistoryRecord(record)} />}
+          historyPane={<DeployHistoryPanel records={deployHistory} onOpenRecord={(record) => void openHistoryRecord(record)} onDeleteRecord={deleteDeployHistory} />}
           tabsPane={
             <WorkbenchTabs
               tabs={tabs}

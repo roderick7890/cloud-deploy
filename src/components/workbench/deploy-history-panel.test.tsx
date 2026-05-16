@@ -22,7 +22,7 @@ describe("DeployHistoryPanel", () => {
     const user = userEvent.setup();
     const onOpenRecord = vi.fn();
 
-    renderWithProviders(<DeployHistoryPanel records={[record]} onOpenRecord={onOpenRecord} />);
+    renderWithProviders(<DeployHistoryPanel records={[record]} onOpenRecord={onOpenRecord} onDeleteRecord={vi.fn()} />);
 
     expect(screen.getByText("Latest 10 deploys")).toBeInTheDocument();
     expect(screen.getByText("demo/Cargo.toml")).toBeInTheDocument();
@@ -32,8 +32,21 @@ describe("DeployHistoryPanel", () => {
     expect(onOpenRecord).toHaveBeenCalledWith(record);
   });
 
+  it("deletes a selected record without opening it", async () => {
+    const user = userEvent.setup();
+    const onOpenRecord = vi.fn();
+    const onDeleteRecord = vi.fn();
+
+    renderWithProviders(<DeployHistoryPanel records={[record]} onOpenRecord={onOpenRecord} onDeleteRecord={onDeleteRecord} />);
+
+    await user.click(screen.getByRole("button", { name: /Delete deploy history/ }));
+
+    expect(onDeleteRecord).toHaveBeenCalledWith(record.id);
+    expect(onOpenRecord).not.toHaveBeenCalled();
+  });
+
   it("renders an empty state", () => {
-    renderWithProviders(<DeployHistoryPanel records={[]} onOpenRecord={vi.fn()} />);
+    renderWithProviders(<DeployHistoryPanel records={[]} onOpenRecord={vi.fn()} onDeleteRecord={vi.fn()} />);
 
     expect(screen.getByText("No deploy history yet.")).toBeInTheDocument();
   });

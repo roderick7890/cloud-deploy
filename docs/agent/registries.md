@@ -37,7 +37,7 @@ The `Key Props` column is a selection aid. The component's exported props type i
 | `FileDetailTab` | `src/components/workbench/file-detail-tab.tsx` | active | Renders readonly TOML file previews and non-TOML metadata in workbench tabs | `path`, `files`, `tomlFiles` | Workbench file detail tabs | Uses `Badge`, `Textarea` |
 | `RunOutputTab` | `src/components/workbench/run-output-tab.tsx` | active | Raw-first build/deploy/history output renderer with copyable raw JSON, ABI item, env dialog, tx lookup pending/check state, and transaction details | `tab` | Workbench run/history tabs | Uses `Badge`, `Button`, `Dialog`, `ScrollArea` |
 | `ActionDeck` | `src/components/workbench/action-deck.tsx` | active | Bottom workbench build/deploy action cards shown only after a TOML target is selected | `selectedTomlPath`, `isBuilding`, `isDeploying`, `onBuild`, `onDeploy` | Workbench action pane | Uses `Button` |
-| `DeployHistoryPanel` | `src/components/workbench/deploy-history-panel.tsx` | active | Latest 10 deploy history list that opens records by tx hash and saved env | `records`, `onOpenRecord` | Workbench history pane | Uses `Badge`, `Button`, `ScrollArea` |
+| `DeployHistoryPanel` | `src/components/workbench/deploy-history-panel.tsx` | active | Latest 10 deploy history list that opens records by tx hash and saved env, with per-record deletion | `records`, `onOpenRecord`, `onDeleteRecord` | Workbench history pane | Uses `Badge`, `Button`, `ScrollArea` |
 | `DeployWorkbench` | `src/components/workbench/deploy-workbench.tsx` | active | Composes the four resizable compiler workbench panes | `layout`, `onLayoutChange`, pane render props | Rendering the workbench page shell | Uses `ResizeHandle` |
 | `ResizeHandle` | `src/components/workbench/resizable-panels.tsx` | active | Pointer-driven splitter handle for workbench panes | `ariaLabel`, `orientation`, `onDrag` | Resizing workbench panes | Raw `div` with separator role |
 
@@ -80,7 +80,7 @@ Persistent and runtime stores live in `src/store`. Store modules own browser sta
 | --- | --- | --- | --- | --- | --- | --- |
 | `settings-store` | `src/store/settings-store.ts` | active | Persists RPC endpoint, Lyquid ID, ABI, Build Method, Deploy Method, and derived ABI state | `useSettingsStore` | Settings, Build, Deploy | Only settings are persisted here |
 | `deploy-session-store` | `src/store/deploy-session-store.ts` | active | Holds legacy wizard runtime upload/build/review/deploy state | `useDeploySessionStore` | Legacy wizard components | Do not persist uploaded files or run outputs |
-| `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and latest 10 deploy history records | `useWorkbenchStore` | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
+| `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and latest 10 deploy history records | `useWorkbenchStore` with layout setters and deploy history add/delete/clear actions | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
 
 ## Config Registry
 
