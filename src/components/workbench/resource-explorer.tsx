@@ -43,7 +43,7 @@ function FolderInput({
         aria-label={label}
         type="file"
         multiple
-        className="sr-only"
+        className="absolute h-px w-px overflow-hidden opacity-0"
         {...directoryInputProps}
         onChange={(event) => onFiles(Array.from(event.target.files ?? []))}
       />

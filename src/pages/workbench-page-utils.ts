@@ -23,7 +23,7 @@ export function getTxHash(raw: unknown) {
   return isRecord(raw) && typeof raw.transactionHash === "string" && raw.transactionHash.startsWith("0x") ? raw.transactionHash : undefined;
 }
 
-export function createRunTitle(action: "build" | "deploy" | "history", targetFile: string, timestamp: number) {
+export function createRunTitle(action: "build" | "deploy", targetFile: string, timestamp: number) {
   const fileName = targetFile.split("/").pop() || "target";
   return `${action}_${fileName}_${timestamp}`;
 }

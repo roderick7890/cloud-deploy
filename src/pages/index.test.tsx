@@ -88,7 +88,7 @@ describe("HomePage", () => {
       folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
     ]);
 
-    expect(await screen.findByText("Select a TOML target to build or deploy.")).toBeInTheDocument();
+    expect(await screen.findByText("No TOML target selected")).toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
 
     expect(screen.getByRole("button", { name: "Build" })).toBeInTheDocument();
@@ -165,5 +165,28 @@ describe("HomePage", () => {
       });
     });
     expect(await screen.findByLabelText("Transaction found")).toBeInTheDocument();
+  });
+
+  it("opens deploy history with the original deploy run title shape", async () => {
+    const transactionHash = "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318";
+    fetchRpcTransactionMock.mockResolvedValue({ hash: transactionHash, input: "0xabcdef" });
+    useWorkbenchStore.getState().addDeployHistory({
+      id: "history-1",
+      txHash: transactionHash,
+      timestamp: 1778916000000,
+      targetFile: "demo/Cargo.toml",
+      status: "submitted",
+      env: {
+        rpcEndpoint: "http://localhost:8545",
+        deployMethodAbiItem: { type: "function", name: "deploy", inputs: [] }
+      }
+    });
+    const user = userEvent.setup();
+
+    renderWithProviders(<HomePage />);
+    await user.click(screen.getByRole("button", { name: /Open deploy history/ }));
+
+    expect(await screen.findByRole("tab", { name: "deploy_Cargo.toml_1778916000000" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "history_Cargo.toml_1778916000000" })).not.toBeInTheDocument();
   });
 });

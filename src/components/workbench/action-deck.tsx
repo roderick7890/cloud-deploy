@@ -10,13 +10,8 @@ type ActionDeckProps = {
 };
 
 export function ActionDeck({ selectedTomlPath, isBuilding, isDeploying, onBuild, onDeploy }: ActionDeckProps) {
-  if (!selectedTomlPath) {
-    return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        <p>Select a TOML target to build or deploy.</p>
-      </div>
-    );
-  }
+  const hasTarget = Boolean(selectedTomlPath);
+  const targetLabel = selectedTomlPath || "No TOML target selected";
 
   return (
     <div className="grid h-full min-h-0 gap-4 p-4 md:grid-cols-2">
@@ -26,9 +21,9 @@ export function ActionDeck({ selectedTomlPath, isBuilding, isDeploying, onBuild,
             <Hammer className="h-5 w-5 text-primary" />
             <h2 className="font-semibold">Build</h2>
           </div>
-          <p className="break-all text-sm text-muted-foreground">{selectedTomlPath}</p>
+          <p className="break-all text-sm text-muted-foreground">{targetLabel}</p>
         </div>
-        <Button type="button" disabled={isBuilding} onClick={onBuild}>
+        <Button type="button" disabled={!hasTarget || isBuilding} onClick={onBuild}>
           {isBuilding ? "Building..." : "Build"}
         </Button>
       </section>
@@ -41,7 +36,7 @@ export function ActionDeck({ selectedTomlPath, isBuilding, isDeploying, onBuild,
           </div>
           <p className="text-sm text-muted-foreground">Deploy runs build first when the current target has no prepared calldata.</p>
         </div>
-        <Button type="button" disabled={isDeploying} onClick={onDeploy}>
+        <Button type="button" disabled={!hasTarget || isDeploying} onClick={onDeploy}>
           {isDeploying ? "Deploying..." : "Deploy"}
         </Button>
       </section>

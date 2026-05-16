@@ -5,11 +5,12 @@ import { renderWithProviders } from "@/test/render";
 import { ActionDeck } from "./action-deck";
 
 describe("ActionDeck", () => {
-  it("asks for a TOML target before showing build and deploy actions", () => {
+  it("keeps build and deploy actions visible before a TOML target is selected", () => {
     renderWithProviders(<ActionDeck selectedTomlPath="" isBuilding={false} isDeploying={false} onBuild={vi.fn()} onDeploy={vi.fn()} />);
 
-    expect(screen.getByText("Select a TOML target to build or deploy.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Build" })).not.toBeInTheDocument();
+    expect(screen.getByText("No TOML target selected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Build" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Deploy" })).toBeDisabled();
   });
 
   it("renders build and deploy cards for a selected target", async () => {

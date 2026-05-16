@@ -32,7 +32,7 @@ export function AppShell({
   showProgress = true
 }: AppShellProps) {
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen w-full max-w-full flex-col overflow-hidden bg-background">
       <AppHeader
         walletLabel={walletLabel}
         walletAddress={walletAddress}
@@ -41,13 +41,13 @@ export function AppShell({
         onDisconnectWallet={onDisconnectWallet}
         onOpenSettings={onOpenSettings}
       />
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {showProgress && currentStep && completedSteps && onStepBack ? (
           <section className="border-b bg-card px-6 py-5">
             <ProgressSteps steps={deploySteps} currentStep={currentStep} completedSteps={completedSteps} onStepBack={onStepBack} />
           </section>
         ) : null}
-        <section className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</section>
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</section>
       </main>
     </div>
   );

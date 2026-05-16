@@ -27,6 +27,10 @@ function getTxHash(tab: WorkbenchTab) {
   return stringValue(isRecord(tab.raw) ? tab.raw.transactionHash : undefined) ?? stringValue(isRecord(tab.transactionRaw) ? tab.transactionRaw.hash : undefined);
 }
 
+function getDeployAbi(raw: unknown) {
+  return isRecord(raw) && raw.deployAbi ? raw.deployAbi : null;
+}
+
 function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="space-y-3 rounded-md border bg-card p-4">
@@ -55,6 +59,7 @@ export function RunOutputTab({ tab }: RunOutputTabProps) {
   const txFound = Boolean(tab.transactionRaw);
   const txPending = Boolean(txHash && !txFound && tab.status === "loading");
   const abiItem = tab.kind === "deploy-run" ? tab.env?.deployMethodAbiItem : tab.env?.buildMethodAbiItem;
+  const deployAbi = getDeployAbi(tab.raw);
 
   return (
     <div className="space-y-4">
@@ -107,6 +112,20 @@ export function RunOutputTab({ tab }: RunOutputTabProps) {
       {tab.transactionRaw ? (
         <Section title="Transaction Details">
           <JsonScroll value={tab.transactionRaw} />
+        </Section>
+      ) : null}
+
+      {deployAbi ? (
+        <Section
+          title="Deploy ABI"
+          action={
+            <Button type="button" variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(jsonText(deployAbi))}>
+              <Copy className="h-4 w-4" />
+              Copy Deploy ABI
+            </Button>
+          }
+        >
+          <JsonScroll value={deployAbi} />
         </Section>
       ) : null}
 

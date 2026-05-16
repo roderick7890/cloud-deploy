@@ -201,7 +201,7 @@ export default function HomePage() {
     upsertTab({
       id: tabId,
       kind: "deploy-history",
-      title: createRunTitle("history", record.targetFile, record.timestamp),
+      title: createRunTitle("deploy", record.targetFile, record.timestamp),
       createdAt: Date.now(),
       targetFile: record.targetFile,
       status: "loading",

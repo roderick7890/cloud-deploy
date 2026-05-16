@@ -64,4 +64,27 @@ describe("RunOutputTab", () => {
 
     expect(screen.getByLabelText("Transaction found")).toBeInTheDocument();
   });
+
+  it("renders deploy ABI from raw output as a separate copyable card", async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
+    const deployAbi = { type: "function", name: "deploy", inputs: [{ name: "payload", type: "bytes" }] };
+
+    renderWithProviders(
+      <RunOutputTab
+        tab={{
+          ...baseTab,
+          id: "deploy-abi",
+          kind: "deploy-run",
+          raw: { transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318", deployAbi }
+        }}
+      />
+    );
+
+    expect(screen.getByText("Deploy ABI")).toBeInTheDocument();
+    expect(screen.getAllByText(/"name": "deploy"/).length).toBeGreaterThanOrEqual(1);
+
+    await user.click(screen.getByRole("button", { name: "Copy Deploy ABI" }));
+    expect(writeText).toHaveBeenCalledWith(JSON.stringify(deployAbi, null, 2));
+  });
 });
