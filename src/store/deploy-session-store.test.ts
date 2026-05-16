@@ -19,8 +19,12 @@ describe("deploy-session-store", () => {
     useDeploySessionStore.getState().setDeployResult({ status: "success", raw: { ok: true } });
 
     useDeploySessionStore.getState().setUploadedProject({
-      metadata: { name: "cloud.zip", fileCount: 1, totalSize: 3 },
-      files: [new File(["abc"], "cloud.zip")]
+      metadata: { name: "cloud", fileCount: 1, totalSize: 3 },
+      files: [new File(["abc"], "Cargo.toml")],
+      rootName: "cloud",
+      tree: [],
+      tomlFiles: [],
+      selectedTomlPath: "Cargo.toml"
     });
 
     expect(useDeploySessionStore.getState().buildResult).toBeNull();

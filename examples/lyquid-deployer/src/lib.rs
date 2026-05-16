@@ -11,7 +11,7 @@ const DEPLOYER_ABI: &str = r#"[
   },
   {
     "type": "function",
-    "name": "abi",
+    "name": "exportAbi",
     "stateMutability": "view",
     "inputs": [],
     "outputs": [
@@ -138,7 +138,7 @@ fn constructor(ctx: &mut _, name: String, version: String) {
 }
 
 #[method::instance(export = eth)]
-fn abi(_ctx: &_) -> LyquidResult<String> {
+fn exportAbi(_ctx: &_) -> LyquidResult<String> {
     Ok(DEPLOYER_ABI.to_string())
 }
 

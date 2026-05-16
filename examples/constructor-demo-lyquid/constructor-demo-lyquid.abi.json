@@ -9,7 +9,7 @@
   },
   {
     "type": "function",
-    "name": "abi",
+    "name": "exportAbi",
     "stateMutability": "view",
     "inputs": [],
     "outputs": [

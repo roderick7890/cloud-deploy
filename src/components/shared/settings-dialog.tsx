@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { DefaultSettings } from "@/config/default-settings-config";
-import type { AbiMethodOption } from "@/types/abi";
+import type { AbiMethodErrors, AbiMethodOption } from "@/types/abi";
+import { deriveAbiState } from "@/utils/abi/abi-utils";
 import { AbiMethodSelect } from "./abi-method-select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,16 +14,15 @@ type SettingsDialogProps = {
   onOpenChange: (open: boolean) => void;
   settings: DefaultSettings;
   methodOptions: AbiMethodOption[];
-  methodErrors: {
-    abi?: string;
-    buildMethod?: string;
-    deployMethod?: string;
-  };
+  methodErrors: AbiMethodErrors;
   onSave: (settings: DefaultSettings) => void;
 };
 
 export function SettingsDialog({ open, onOpenChange, settings, methodOptions, methodErrors, onSave }: SettingsDialogProps) {
   const [draft, setDraft] = useState(settings);
+  const draftAbiState = useMemo(() => deriveAbiState(draft), [draft]);
+  const visibleMethodOptions = draft.abi === settings.abi ? methodOptions : draftAbiState.methodOptions;
+  const visibleMethodErrors = draft.abi === settings.abi && draft.buildMethod === settings.buildMethod && draft.deployMethod === settings.deployMethod ? methodErrors : draftAbiState.methodErrors;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -42,24 +42,24 @@ export function SettingsDialog({ open, onOpenChange, settings, methodOptions, me
           </div>
           <div className="space-y-2">
             <Label htmlFor="abi">ABI</Label>
-            <Textarea id="abi" rows={8} value={draft.abi} onChange={(event) => setDraft({ ...draft, abi: event.target.value })} aria-invalid={Boolean(methodErrors.abi)} />
-            {methodErrors.abi ? <p className="text-caption text-destructive">{methodErrors.abi}</p> : null}
+            <Textarea id="abi" rows={8} value={draft.abi} onChange={(event) => setDraft({ ...draft, abi: event.target.value })} aria-invalid={Boolean(visibleMethodErrors.abi)} />
+            {visibleMethodErrors.abi ? <p className="text-caption text-destructive">{visibleMethodErrors.abi}</p> : null}
           </div>
           <AbiMethodSelect
             id="build-method"
             label="Build Method"
-            methods={methodOptions}
+            methods={visibleMethodOptions}
             value={draft.buildMethod}
             onValueChange={(buildMethod) => setDraft({ ...draft, buildMethod })}
-            missingMessage={methodErrors.buildMethod}
+            missingMessage={visibleMethodErrors.buildMethod}
           />
           <AbiMethodSelect
             id="deploy-method"
             label="Deploy Method"
-            methods={methodOptions}
+            methods={visibleMethodOptions}
             value={draft.deployMethod}
             onValueChange={(deployMethod) => setDraft({ ...draft, deployMethod })}
-            missingMessage={methodErrors.deployMethod}
+            missingMessage={visibleMethodErrors.deployMethod}
           />
         </div>
         <DialogFooter>

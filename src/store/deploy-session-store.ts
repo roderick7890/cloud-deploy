@@ -1,21 +1,14 @@
 import { create } from "zustand";
-import type { BuildResult, DeployResult, DeployStepId, ProjectMetadata, ReviewPayload } from "@/types/deploy";
-
-type UploadedProject = {
-  metadata: ProjectMetadata;
-  files: File[];
-};
+import type { BuildResult, DeployResult, DeployStepId, ReviewPayload, UploadedProject } from "@/types/deploy";
 
 type DeploySessionState = {
   currentStep: DeployStepId;
   uploadedProject: UploadedProject | null;
-  constructorValues: Record<string, string>;
   buildResult: BuildResult | null;
   reviewPayload: ReviewPayload | null;
   deployResult: DeployResult | null;
   currentError: string | null;
   setUploadedProject: (project: UploadedProject) => void;
-  setConstructorValues: (values: Record<string, string>) => void;
   setBuildResult: (result: BuildResult) => void;
   setReviewPayload: (payload: ReviewPayload) => void;
   setDeployResult: (result: DeployResult) => void;
@@ -31,7 +24,6 @@ const stepOrder: DeployStepId[] = ["upload", "build", "review", "deploy"];
 const initialState = {
   currentStep: "upload" as DeployStepId,
   uploadedProject: null,
-  constructorValues: {},
   buildResult: null,
   reviewPayload: null,
   deployResult: null,
@@ -51,14 +43,6 @@ export const useDeploySessionStore = create<DeploySessionState>()((set) => ({
   setUploadedProject: (project) =>
     set({
       uploadedProject: project,
-      buildResult: null,
-      reviewPayload: null,
-      deployResult: null,
-      currentError: null
-    }),
-  setConstructorValues: (values) =>
-    set({
-      constructorValues: values,
       buildResult: null,
       reviewPayload: null,
       deployResult: null,

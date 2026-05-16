@@ -4,7 +4,7 @@ This example is the deploy-capable Lyquid for the Cloud Deploy frontend.
 
 ## Methods
 
-- `abi()` is an off-chain `instance` method that returns the frontend-importable ABI JSON.
+- `exportAbi()` is an off-chain `instance` method that returns the frontend-importable ABI JSON.
 - `build(bytes project, bytes constructorInput, string projectName)` is an off-chain `instance` method. In this example it creates deterministic deploy code bytes from the uploaded project payload, constructor input, and project name, then returns `code`, `sourceHash`, `artifactHash`, and `targetAbi`.
 - `deploy(bytes code, bytes constructorInput, bytes32 sourceHash, bytes32 artifactHash, string targetAbi, string repoHint)` is an on-chain `network` method. It increments `deployed_count`, derives a `LyquidID`, records deployment evidence, and returns the `LyquidID`.
 - `deployedCount()`, `latestDeploymentFor(address)`, and `getDeployment(uint64)` expose deployment state.

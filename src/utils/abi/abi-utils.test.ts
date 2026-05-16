@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lyquidTestAbi } from "@/test/test-abi";
 import {
+  deriveAbiState,
   getConstructorFields,
   getMethodOptions,
   methodExists,
@@ -49,5 +50,16 @@ describe("abi-utils", () => {
 
   it("returns a direct parse error for invalid ABI JSON", () => {
     expect(() => parseAbiSource("{")).toThrow("Invalid ABI JSON");
+  });
+
+  it("derives method options and method errors from ABI settings", () => {
+    const derived = deriveAbiState({
+      abi: lyquidTestAbi,
+      buildMethod: "compileProject(bytes)",
+      deployMethod: "missing(bytes)"
+    });
+
+    expect(derived.methodOptions.map((option) => option.value)).toContain("compileProject(bytes)");
+    expect(derived.methodErrors).toEqual({ deployMethod: "Deploy method does not exist." });
   });
 });

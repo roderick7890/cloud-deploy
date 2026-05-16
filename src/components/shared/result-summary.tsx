@@ -20,8 +20,10 @@ export function ResultSummary({ result }: ResultSummaryProps) {
         {result.lyquidId ? <Badge variant="outline">{result.lyquidId}</Badge> : null}
         {result.signedPayloadHash ? <Badge variant="outline">{shortHash(result.signedPayloadHash)}</Badge> : null}
       </div>
-      <ScrollArea className="h-48 rounded-md border bg-card p-4">
-        <pre className="text-sm">{JSON.stringify(result.raw, null, 2)}</pre>
+      <ScrollArea className="h-48 w-full max-w-full rounded-md border bg-card">
+        <div data-json-scroll-content="true" className="w-full max-w-full overflow-x-auto p-4">
+          <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(result.raw, null, 2)}</pre>
+        </div>
       </ScrollArea>
     </div>
   );

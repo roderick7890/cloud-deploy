@@ -17,6 +17,14 @@ vi.mock("wagmi/connectors", () => ({
 }));
 
 describe("HomePage", () => {
+  function folderFile(contents: string, name: string, path: string) {
+    const file = new File([contents], name);
+    Object.defineProperty(file, "webkitRelativePath", {
+      value: path
+    });
+    return file;
+  }
+
   beforeEach(() => {
     useDeploySessionStore.setState(useDeploySessionStore.getInitialState(), true);
     useSettingsStore.setState(useSettingsStore.getInitialState(), true);
@@ -32,13 +40,17 @@ describe("HomePage", () => {
   it("renders upload as the first step", () => {
     renderWithProviders(<HomePage />);
     expect(screen.getByText("Cloud Deploy")).toBeInTheDocument();
-    expect(screen.getByLabelText("Project archive")).toBeInTheDocument();
+    expect(screen.getByLabelText("Project folder")).toBeInTheDocument();
   });
 
   it("moves from upload to build", async () => {
     const user = userEvent.setup();
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Project archive"), new File(["abc"], "cloud.zip"));
+    await user.upload(screen.getByLabelText("Project folder"), [
+      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
+      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
+    ]);
+    await user.click(await screen.findByRole("button", { name: "Select demo/Cargo.toml" }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("button", { name: "Build" })).toBeInTheDocument();
   });

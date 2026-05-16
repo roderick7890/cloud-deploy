@@ -1,5 +1,5 @@
 import type { Abi, AbiFunction } from "viem";
-import type { AbiMethodOption, ConstructorField, NormalizedAbiMethod, ParsedAbi, RequestTransport } from "@/types/abi";
+import type { AbiDerivedState, AbiMethodErrors, AbiMethodOption, ConstructorField, NormalizedAbiMethod, ParsedAbi, RequestTransport } from "@/types/abi";
 
 type AbiItemWithTransport = AbiFunction & {
   "x-lyquid-transport"?: RequestTransport;
@@ -13,6 +13,12 @@ type AbiConstructorItem = {
     type: string;
     internalType?: string;
   }>;
+};
+
+type AbiSelectionSettings = {
+  abi: string;
+  buildMethod: string;
+  deployMethod: string;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -107,4 +113,37 @@ export function methodExists(parsed: ParsedAbi, selectedMethod: string) {
 
 export function findMethod(parsed: ParsedAbi, selectedMethod: string) {
   return parsed.methods.find((method) => method.signature === selectedMethod);
+}
+
+export function deriveAbiState(settings: AbiSelectionSettings): AbiDerivedState {
+  try {
+    const parsedAbi = parseAbiSource(settings.abi);
+    const methodOptions = getMethodOptions(parsedAbi);
+    const constructorFields = getConstructorFields(parsedAbi);
+    const methodErrors: AbiMethodErrors = {};
+
+    if (settings.buildMethod && !methodExists(parsedAbi, settings.buildMethod)) {
+      methodErrors.buildMethod = "Build method does not exist.";
+    }
+
+    if (settings.deployMethod && !methodExists(parsedAbi, settings.deployMethod)) {
+      methodErrors.deployMethod = "Deploy method does not exist.";
+    }
+
+    return {
+      parsedAbi,
+      methodOptions,
+      constructorFields,
+      methodErrors
+    };
+  } catch (error) {
+    return {
+      parsedAbi: null,
+      methodOptions: [],
+      constructorFields: [],
+      methodErrors: {
+        abi: error instanceof Error ? error.message : "Invalid ABI JSON"
+      }
+    };
+  }
 }

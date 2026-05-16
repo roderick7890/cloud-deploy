@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { lyquidTestAbi } from "@/test/test-abi";
@@ -8,6 +8,8 @@ import { AbiMethodSelect } from "./abi-method-select";
 import { ConstructorParamsForm } from "./constructor-params-form";
 import { PayloadReviewPanel } from "./payload-review-panel";
 import { ProgressSteps } from "./progress-steps";
+import { ResultSummary } from "./result-summary";
+import { SettingsDialog } from "./settings-dialog";
 
 describe("shared components", () => {
   it("shows ABI method select errors", () => {
@@ -24,6 +26,26 @@ describe("shared components", () => {
     );
 
     expect(screen.getByText("Build method does not exist.")).toBeInTheDocument();
+  });
+
+  it("updates method options from a valid ABI draft before settings are saved", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+
+    renderWithProviders(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        settings={{ rpcEndpoint: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
+        methodOptions={[]}
+        methodErrors={{}}
+        onSave={vi.fn()}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("ABI"), { target: { value: lyquidTestAbi } });
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Build Method" }), { key: "ArrowDown" });
+
+    expect(await screen.findByText("compileProject(bytes)")).toBeInTheDocument();
   });
 
   it("renders constructor inputs and reports values", async () => {
@@ -86,5 +108,36 @@ describe("shared components", () => {
 
     expect(screen.getByText("0x1234...cdef")).toBeInTheDocument();
     expect(screen.queryByText("artifactHash")).not.toBeInTheDocument();
+  });
+
+  it("keeps long review JSON lines horizontally scrollable", () => {
+    const { container } = renderWithProviders(
+      <PayloadReviewPanel
+        hashes={{ sourceHash: "0x1234567890abcdef" }}
+        payload={{ raw: { result: "0x".padEnd(180, "a") } }}
+        onCopy={vi.fn()}
+        onDownload={vi.fn()}
+      />
+    );
+
+    expect(container.querySelector('[data-json-scroll-content="true"]')).toHaveClass("overflow-x-auto");
+    expect(container.querySelector("pre")).toHaveClass("w-max", "min-w-full", "whitespace-pre");
+  });
+
+  it("keeps long deploy result JSON lines horizontally scrollable", () => {
+    const { container } = renderWithProviders(
+      <ResultSummary
+        result={{
+          status: "submitted",
+          raw: {
+            jsonrpc: "2.0",
+            result: "0x".padEnd(180, "b")
+          }
+        }}
+      />
+    );
+
+    expect(container.querySelector('[data-json-scroll-content="true"]')).toHaveClass("overflow-x-auto");
+    expect(container.querySelector("pre")).toHaveClass("w-max", "min-w-full", "whitespace-pre");
   });
 });

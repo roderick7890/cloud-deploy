@@ -2,6 +2,7 @@ import type { NormalizedAbiMethod, ParsedAbi } from "@/types/abi";
 
 export type RequestSenderContext = {
   rpcEndpoint: string;
+  lyquidId?: string;
   accountAddress?: `0x${string}`;
   walletClient?: unknown;
   publicClient?: unknown;

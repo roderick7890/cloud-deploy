@@ -27,3 +27,16 @@ export type ParsedAbi = {
   methods: NormalizedAbiMethod[];
   constructorFields: ConstructorField[];
 };
+
+export type AbiMethodErrors = {
+  abi?: string;
+  buildMethod?: string;
+  deployMethod?: string;
+};
+
+export type AbiDerivedState = {
+  parsedAbi: ParsedAbi | null;
+  methodOptions: AbiMethodOption[];
+  constructorFields: ConstructorField[];
+  methodErrors: AbiMethodErrors;
+};

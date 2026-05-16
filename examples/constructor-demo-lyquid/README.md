@@ -10,7 +10,7 @@ Constructor arguments:
 
 Useful methods:
 
-- `abi()` returns this example's ABI JSON through the off-chain path.
+- `exportAbi()` returns this example's ABI JSON through the off-chain path.
 - `getState()` returns `owner`, `label`, `limit`, and `counter`.
 - `setLabel(string)` is owner-only.
 - `increment(uint256)` increases `counter` until it reaches `limit`.

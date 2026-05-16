@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { getProjectMetadata, readProjectArchive } from "./file-utils";
+import { analyzeProjectFiles, getProjectMetadata, readProjectArchive } from "./file-utils";
 
 describe("file-utils", () => {
+  function folderFile(contents: string, name: string, path: string) {
+    const file = new File([contents], name);
+    Object.defineProperty(file, "webkitRelativePath", {
+      value: path
+    });
+    return file;
+  }
+
   it("reads metadata from uploaded files", () => {
     const files = [
       new File(["abc"], "cloud.zip", { type: "application/zip" }),
@@ -18,5 +26,48 @@ describe("file-utils", () => {
   it("reads a single archive as bytes", async () => {
     const file = new File(["abc"], "cloud.zip", { type: "application/zip" });
     await expect(readProjectArchive(file)).resolves.toBeInstanceOf(Uint8Array);
+  });
+
+  it("builds a folder tree and reads only TOML previews", async () => {
+    const analysis = await analyzeProjectFiles([
+      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
+      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
+    ]);
+
+    expect(analysis.rootName).toBe("demo");
+    expect(analysis.metadata).toEqual({
+      name: "demo",
+      fileCount: 2,
+      totalSize: 39
+    });
+    expect(analysis.tomlFiles).toEqual([
+      {
+        path: "demo/Cargo.toml",
+        name: "Cargo.toml",
+        content: '[package]\nname = "demo"\n',
+        size: 24
+      }
+    ]);
+    expect(analysis.tree).toEqual([
+      expect.objectContaining({
+        name: "demo",
+        type: "directory",
+        children: expect.arrayContaining([
+          expect.objectContaining({ name: "Cargo.toml", path: "demo/Cargo.toml", type: "file" }),
+          expect.objectContaining({ name: "src", path: "demo/src", type: "directory" })
+        ])
+      })
+    ]);
+  });
+
+  it("handles an empty folder analysis defensively", async () => {
+    await expect(analyzeProjectFiles([])).resolves.toEqual({
+      metadata: { name: "Untitled project", fileCount: 0, totalSize: 0 },
+      files: [],
+      rootName: "Untitled project",
+      tree: [],
+      tomlFiles: [],
+      selectedTomlPath: ""
+    });
   });
 });

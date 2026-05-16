@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAccount, useConnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { BuildStep } from "@/components/build-step";
@@ -10,9 +10,18 @@ import { AppShell } from "@/layout/app-shell";
 import { useDeploySessionStore } from "@/store/deploy-session-store";
 import { useSettingsStore } from "@/store/settings-store";
 import type { DeployStepId } from "@/types/deploy";
+import { findMethod } from "@/utils/abi/abi-utils";
+import { prepareBuildMethodCall } from "@/utils/build-args-utils";
 import { downloadJson } from "@/utils/download-utils";
-import { hashConstructorInput, hashPayload, hashSource } from "@/utils/hash-utils";
+import { hashPayload } from "@/utils/hash-utils";
+import { fetchLyquidContractAddress } from "@/utils/request/lyquid-info-client";
 import { dispatchSelectedMethod } from "@/utils/request/request-dispatcher";
+
+type DeployTargetStatus = {
+  requestKey: string;
+  contractAddress: string | null;
+  isChecking: boolean;
+};
 
 const completedByStep: Record<DeployStepId, DeployStepId[]> = {
   upload: [],
@@ -23,13 +32,65 @@ const completedByStep: Record<DeployStepId, DeployStepId[]> = {
 
 export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isBuilding, setIsBuilding] = useState(false);
+  const [deployTargetStatus, setDeployTargetStatus] = useState<DeployTargetStatus | null>(null);
   const account = useAccount();
   const { connect } = useConnect();
   const settings = useSettingsStore();
   const session = useDeploySessionStore();
+  const setCurrentError = session.setCurrentError;
 
   const walletLabel = account.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "Connect Wallet";
   const canBuild = Boolean(session.uploadedProject && settings.parsedAbi && settings.buildMethod && !settings.methodErrors.buildMethod);
+  const connectWallet = () => connect({ connector: injected() });
+  const deployTargetRequestKey =
+    session.currentStep === "deploy" && settings.lyquidId && settings.rpcEndpoint ? `${settings.rpcEndpoint}\n${settings.lyquidId}` : null;
+  const deployTargetContract = deployTargetStatus?.requestKey === deployTargetRequestKey ? deployTargetStatus.contractAddress : null;
+  const isCheckingDeployTarget = Boolean(
+    deployTargetRequestKey && (deployTargetStatus?.requestKey !== deployTargetRequestKey || deployTargetStatus.isChecking)
+  );
+  useEffect(() => {
+    if (!deployTargetRequestKey) {
+      return;
+    }
+    let cancelled = false;
+    void Promise.resolve().then(async () => {
+      if (cancelled) {
+        return;
+      }
+      setDeployTargetStatus({
+        requestKey: deployTargetRequestKey,
+        contractAddress: null,
+        isChecking: true
+      });
+      try {
+        const contractAddress = await fetchLyquidContractAddress({
+          rpcEndpoint: settings.rpcEndpoint,
+          lyquidId: settings.lyquidId,
+          offChainFetch: (input, init) => fetch(input, init)
+        });
+        if (!cancelled) {
+          setDeployTargetStatus({
+            requestKey: deployTargetRequestKey,
+            contractAddress,
+            isChecking: false
+          });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setDeployTargetStatus({
+            requestKey: deployTargetRequestKey,
+            contractAddress: null,
+            isChecking: false
+          });
+          setCurrentError(error instanceof Error ? error.message : "Failed to check Lyquid deployment status.");
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [deployTargetRequestKey, settings.lyquidId, settings.rpcEndpoint, setCurrentError]);
 
   const handleBuild = async () => {
     if (!settings.parsedAbi || !session.uploadedProject) {
@@ -38,33 +99,50 @@ export default function HomePage() {
     }
 
     try {
-      const sourceBytes = new TextEncoder().encode(JSON.stringify(session.uploadedProject.metadata));
-      const sourceHash = await hashSource(sourceBytes);
-      const constructorInputHash = await hashConstructorInput(session.constructorValues);
+      setIsBuilding(true);
+      session.setCurrentError(null);
+      const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
+      if (!buildMethod) {
+        session.setCurrentError("Selected build method does not exist.");
+        return;
+      }
+
+      const { args, sourceHash } = await prepareBuildMethodCall({
+        method: buildMethod,
+        project: session.uploadedProject
+      });
       const raw = await dispatchSelectedMethod({
         parsedAbi: settings.parsedAbi,
         selectedMethod: settings.buildMethod,
-        args: [sourceHash],
+        args,
         context: {
           rpcEndpoint: settings.rpcEndpoint,
+          lyquidId: settings.lyquidId,
           accountAddress: account.address,
-          offChainFetch: fetch
+          offChainFetch: (input, init) => fetch(input, init)
         }
       });
       const artifactHash = await hashPayload(raw);
 
       session.setBuildResult({
-        hashes: { sourceHash, artifactHash, constructorInputHash },
+        hashes: { sourceHash, artifactHash },
         logs: [],
         payload: raw,
         raw
       });
     } catch (error) {
       session.setCurrentError(error instanceof Error ? error.message : "Build failed.");
+    } finally {
+      setIsBuilding(false);
     }
   };
 
   const handleDeploy = async () => {
+    if (!account.address) {
+      session.setCurrentError("Connect wallet before deploying.");
+      return;
+    }
+
     if (!settings.parsedAbi || !session.reviewPayload) {
       session.setCurrentError("Review payload is required before deploy.");
       return;
@@ -77,8 +155,9 @@ export default function HomePage() {
         args: [JSON.stringify(session.reviewPayload.payload)],
         context: {
           rpcEndpoint: settings.rpcEndpoint,
+          lyquidId: settings.lyquidId,
           accountAddress: account.address,
-          offChainFetch: fetch
+          offChainFetch: (input, init) => fetch(input, init)
         }
       });
       const signedPayloadHash = await hashPayload(raw);
@@ -93,13 +172,22 @@ export default function HomePage() {
   };
 
   let stepContent = (
-    <DeployStep lyquidId={settings.lyquidId} result={session.deployResult} onDeploy={handleDeploy} error={session.currentError} />
+    <DeployStep
+      lyquidId={settings.lyquidId}
+      isUpdateDeploy={Boolean(deployTargetContract)}
+      isCheckingUpdateStatus={isCheckingDeployTarget}
+      isWalletConnected={Boolean(account.address)}
+      result={session.deployResult}
+      onDeploy={handleDeploy}
+      onConnectWallet={connectWallet}
+      error={session.currentError}
+    />
   );
 
   if (session.currentStep === "upload") {
     stepContent = (
       <UploadStep
-        metadata={session.uploadedProject?.metadata ?? null}
+        project={session.uploadedProject}
         onUpload={session.setUploadedProject}
         onContinue={() => session.goToStep("build")}
       />
@@ -109,11 +197,9 @@ export default function HomePage() {
   if (session.currentStep === "build") {
     stepContent = (
       <BuildStep
-        constructorFields={settings.constructorFields}
-        constructorValues={session.constructorValues}
-        onConstructorValuesChange={session.setConstructorValues}
         onBuild={handleBuild}
         canBuild={canBuild}
+        isBuilding={isBuilding}
         error={session.currentError}
       />
     );
@@ -136,7 +222,7 @@ export default function HomePage() {
         currentStep={session.currentStep}
         completedSteps={completedByStep[session.currentStep]}
         walletLabel={walletLabel}
-        onConnectWallet={() => connect({ connector: injected() })}
+        onConnectWallet={connectWallet}
         onOpenSettings={() => setSettingsOpen(true)}
         onStepBack={session.goToStep}
       >
