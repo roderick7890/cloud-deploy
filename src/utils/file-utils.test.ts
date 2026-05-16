@@ -60,14 +60,12 @@ describe("file-utils", () => {
     ]);
   });
 
-  it("handles an empty folder analysis defensively", async () => {
-    await expect(analyzeProjectFiles([])).resolves.toEqual({
-      metadata: { name: "Untitled project", fileCount: 0, totalSize: 0 },
-      files: [],
-      rootName: "Untitled project",
-      tree: [],
-      tomlFiles: [],
-      selectedTomlPath: ""
-    });
+  it("rejects empty project uploads", async () => {
+    await expect(analyzeProjectFiles([])).rejects.toThrow("No files were found in the upload.");
+  });
+
+  it("rejects uploads without TOML build targets", async () => {
+    const file = new File(["hello"], "README.md");
+    await expect(analyzeProjectFiles([file])).rejects.toThrow("No TOML build targets were found.");
   });
 });

@@ -93,9 +93,18 @@ async function readTomlFiles(files: File[]): Promise<ProjectTomlFile[]> {
 }
 
 export async function analyzeProjectFiles(files: File[]): Promise<UploadedProject> {
+  if (files.length === 0) {
+    throw new Error("No files were found in the upload.");
+  }
+
   const tree: ProjectTreeNode[] = [];
   const rootName = getRootName(files);
   files.forEach((file) => addPathToTree(tree, getProjectPath(file)));
+  const tomlFiles = await readTomlFiles(files);
+
+  if (tomlFiles.length === 0) {
+    throw new Error("No TOML build targets were found.");
+  }
 
   return {
     metadata: {
@@ -105,7 +114,7 @@ export async function analyzeProjectFiles(files: File[]): Promise<UploadedProjec
     files,
     rootName,
     tree: sortTree(tree),
-    tomlFiles: await readTomlFiles(files),
+    tomlFiles,
     selectedTomlPath: ""
   };
 }
