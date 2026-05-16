@@ -20,6 +20,8 @@ This design replaces the ambiguous single `lyquidId` meaning from the earlier MV
 - Let users upload a simple Target/Test Lyquid and deploy it through the configured Deployer Lyquid.
 - Preserve the progress-driven workflow: Upload, Build, Review, Deploy.
 - Preserve ABI-selected build and deploy methods without hard-coded method names.
+- Make Build an off-chain operation that does not require a connected wallet.
+- Make Deploy an on-chain operation that requires a connected wallet before submission.
 - Execute the deployment path against a real local devnet when the required external Deployer Lyquid and RPC endpoint are available.
 - Keep deployment-attempt data runtime-only and local settings durable.
 
@@ -117,12 +119,14 @@ Request dispatch must distinguish the call target from the deployment subject:
 
 The dispatcher and senders should avoid accepting a generic `lyquidId` when the meaning could be ambiguous. Function and type names should make the distinction explicit, using terms such as `deployerLyquidId`, `targetPackage`, `targetArtifact`, or `deploymentSubject`.
 
-The existing on-chain and off-chain sender split remains valid:
+The existing on-chain and off-chain sender split remains valid, but the workflow fixes which sender each step uses:
 
-- On-chain sender encodes the selected ABI method with viem and submits or simulates through wagmi/viem.
-- Off-chain sender builds an ABI-shaped request for flows described by the Deployer Lyquid interaction surface.
+- Build uses the off-chain sender. It must not require a connected wallet.
+- Deploy uses the on-chain sender. It must require a connected wallet before submitting.
 
-The selected ABI method drives encoding and transport. Cloud Deploy must not infer behavior from method names.
+The selected ABI method drives encoding. The current workflow step drives the required transport. Cloud Deploy must not infer behavior from method names.
+
+If the selected build method is not marked as off-chain in the ABI interaction surface, Build should fail locally with a method transport error. If the selected deploy method is not on-chain, Deploy should fail locally with a method transport error.
 
 ## Workflow
 
@@ -142,7 +146,8 @@ When the user runs Build:
 
 - the selected build method is encoded according to the Deployer Lyquid ABI;
 - the Target/Test Lyquid package or derived package materials are included according to the selected method's input shape;
-- the request is dispatched to the Deployer Lyquid;
+- the request is dispatched to the Deployer Lyquid through the off-chain sender;
+- no wallet connection is required;
 - the build result is stored in runtime session state.
 
 The build result may contain prepared payloads, hashes, artifacts, logs, or ABI-defined fields. The UI should display what is present without inventing unavailable fields.
@@ -171,8 +176,11 @@ The app reads `deployerLyquidId`, `abi`, and `deployMethod` from Settings and th
 
 When the user runs Deploy:
 
+- check whether a wallet is connected;
+- if no wallet is connected, open a dialog that explains Deploy is on-chain and requires a wallet;
+- after the user connects a wallet from that dialog, continue the deploy action;
 - encode the selected deploy method according to the Deployer Lyquid ABI;
-- submit the request to the configured Deployer Lyquid;
+- submit the request to the configured Deployer Lyquid through the on-chain sender;
 - capture transaction, receipt, returned values, events, or other deployment evidence exposed by the selected method;
 - surface the Target/Test Lyquid deployment result when the evidence contains a usable Lyquid ID or address.
 
@@ -183,12 +191,13 @@ If the selected method returns no usable deployment evidence, the deployment sho
 Errors should be grouped by what the user can inspect next:
 
 - RPC unavailable or wrong chain: check `rpcEndpoint` and local devnet status.
-- Wallet/provider unavailable: connect a wallet or verify provider configuration.
+- Wallet/provider unavailable at Deploy: connect a wallet from the Deploy prompt or verify provider configuration.
 - User rejected signature or transaction: retry the user action.
 - Missing or malformed `deployerLyquidId`: check Settings.
 - Deployer Lyquid not callable: verify that the configured identifier points to a deployed Deployer Lyquid.
 - ABI parse failure: fix or re-import the Deployer Lyquid ABI.
 - Method mismatch: select methods that still exist in the imported ABI.
+- Transport mismatch: select an off-chain method for Build and an on-chain method for Deploy.
 - Invalid Target/Test Lyquid package: upload a package with the required deployable materials.
 - Deployer call failed or reverted: inspect logs, receipt, and Deployer Lyquid result details.
 - No deployment evidence returned: inspect the selected deploy method and Deployer Lyquid return shape.
@@ -216,6 +225,8 @@ Unit tests should cover:
 - ABI reconciliation for `buildMethod` and `deployMethod`;
 - runtime-only behavior of deployment session state;
 - request dispatch using the Deployer Lyquid as call target;
+- request dispatch requiring off-chain transport for Build and on-chain transport for Deploy;
+- Deploy wallet gating: disconnected wallet opens the connect dialog, successful connection continues deployment;
 - Target/Test Lyquid package validation;
 - error mapping for common setup, ABI, package, and deploy failures.
 
@@ -227,6 +238,7 @@ Integration or manual verification should cover:
 - uploading the Target/Test Lyquid fixture;
 - building through the configured Deployer Lyquid;
 - reviewing the prepared deployment request;
+- connecting a wallet when entering the on-chain Deploy step if needed;
 - deploying through the configured Deployer Lyquid;
 - observing usable Target/Test Lyquid deployment evidence.
 
@@ -249,6 +261,7 @@ Any displayed labels should follow the same distinction:
 - Settings clearly configure an existing Deployer Lyquid, not the Target/Test Lyquid.
 - The Target/Test Lyquid fixture is treated as upload/build/deploy input, not as global environment configuration.
 - Request dispatch cannot accidentally use the Target/Test Lyquid as the call target.
-- The Deploy step calls the configured Deployer Lyquid with ABI-selected methods.
+- Build calls the configured Deployer Lyquid through the off-chain sender and does not require wallet connection.
+- Deploy gates on wallet connection and calls the configured Deployer Lyquid through the on-chain sender.
 - Deployment success displays evidence for the deployed Target/Test Lyquid when available.
 - Setup steps for local devnet and Deployer Lyquid deployment remain outside Cloud Deploy product scope.
