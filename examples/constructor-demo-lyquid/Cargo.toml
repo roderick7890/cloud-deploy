@@ -1,0 +1,18 @@
+[package]
+name = "constructor-demo-lyquid"
+version = "0.1.0"
+edition = "2024"
+authors = ["Lyquor"]
+description = "Constructor-parameter Lyquid used to test Cloud Deploy flows."
+
+[dependencies]
+lyquid = { path = "../../../../../.shakenup/ldk/lyquid", features = ["ldk"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+strip = "debuginfo"
+debug = false
+
+[workspace]

@@ -1,5 +1,2 @@
 [build]
 target = "wasm32-unknown-unknown"
-
-[net]
-git-fetch-with-cli = true

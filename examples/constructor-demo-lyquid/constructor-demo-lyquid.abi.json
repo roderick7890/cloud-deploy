@@ -1,0 +1,90 @@
+[
+  {
+    "type": "constructor",
+    "inputs": [
+      { "name": "owner", "type": "address", "internalType": "address" },
+      { "name": "initialLabel", "type": "string", "internalType": "string" },
+      { "name": "limit", "type": "uint256", "internalType": "uint256" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "abi",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "json", "type": "string", "internalType": "string" }
+    ],
+    "x-lyquid-transport": "off-chain"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "owner", "type": "address", "internalType": "address" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "label",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "label", "type": "string", "internalType": "string" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "limit",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "limit", "type": "uint256", "internalType": "uint256" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "counter",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "counter", "type": "uint256", "internalType": "uint256" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "setLabel",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "nextLabel", "type": "string", "internalType": "string" }
+    ],
+    "outputs": [
+      { "name": "ok", "type": "bool", "internalType": "bool" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "increment",
+    "stateMutability": "nonpayable",
+    "inputs": [
+      { "name": "amount", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [
+      { "name": "counter", "type": "uint256", "internalType": "uint256" }
+    ]
+  },
+  {
+    "type": "function",
+    "name": "getState",
+    "stateMutability": "view",
+    "inputs": [],
+    "outputs": [
+      { "name": "owner", "type": "address", "internalType": "address" },
+      { "name": "label", "type": "string", "internalType": "string" },
+      { "name": "limit", "type": "uint256", "internalType": "uint256" },
+      { "name": "counter", "type": "uint256", "internalType": "uint256" }
+    ]
+  }
+]
