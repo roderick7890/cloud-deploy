@@ -58,7 +58,7 @@
 - `src/components/project-tree.tsx`
   - Change from selected background semantics to explicit single-select TOML target control while preserving directory expand/collapse behavior.
 - `src/components/shared/result-summary.tsx`
-  - Reuse parts if helpful, but do not keep it as the main deploy workbench output if `run-output-tab.tsx` replaces it.
+  - Leave in place for legacy tests unless no production imports remain in final cleanup. The workbench uses `run-output-tab.tsx` for deploy output.
 - `src/layout/app-shell.tsx`
   - Remove progress-step dependency or add a `variant="workbench"` path that renders header plus full-height content only.
 - `src/layout/app-shell.test.tsx`
@@ -68,7 +68,7 @@
 - `src/pages/index.test.tsx`
   - Replace wizard tests with workbench tests for upload, target selection, build, deploy auto-build, and history lookup behavior.
 - `src/store/deploy-session-store.ts`
-  - Either remove wizard step fields from page usage or keep for legacy components only. Do not persist uploaded files or run tabs.
+  - Do not use from the new workbench page. Leave the store unchanged until final cleanup confirms whether legacy step components remain.
 - `docs/agent/registries.md`
   - Register new shared/workbench components, `workbench-store`, `workbench-config`, and file utility changes.
 
@@ -296,16 +296,23 @@ export const useWorkbenchStore = create<WorkbenchState>()(
 
 - [ ] **Step 7: Update registry**
 
-Modify `docs/agent/registries.md`:
+Modify `docs/agent/registries.md`.
 
-Add utility/config/store entries in the appropriate tables or notes:
+Add this row to Config Registry:
 
 ```md
-| `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and latest 10 deploy history records | `useWorkbenchStore` | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
 | `workbench-config` | `src/config/workbench-config.ts` | active | Static workbench defaults and limits | `defaultWorkbenchLayout`, `deployHistoryLimit` | Workbench store, upload controls | No runtime state |
 ```
 
-If the registry does not have a store table, add a short "Store Registry" section rather than forcing store entries into Utility Registry.
+Add this new Store Registry section after Utility Registry:
+
+```md
+## Store Registry
+
+| Store | Path | Status | Responsibility | Public API | Used By | Notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and latest 10 deploy history records | `useWorkbenchStore` | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
+```
 
 - [ ] **Step 8: Run tests**
 
@@ -791,7 +798,7 @@ describe("ResourceExplorer", () => {
 });
 ```
 
-Create `src/components/workbench/file-detail-tab.tsx` tests inside a new `src/components/workbench/file-detail-tab.test.tsx` if preferred:
+Create `src/components/workbench/file-detail-tab.test.tsx`:
 
 ```tsx
 import { screen } from "@testing-library/react";
@@ -899,11 +906,18 @@ export function FileDetailTab({ filePath, fileSize, tomlContent }: FileDetailTab
 
 - [ ] **Step 6: Implement ResourceExplorer**
 
-Create `src/components/workbench/resource-explorer.tsx` with shadcn `Button`, `Input`, `ScrollArea`, and `AlertDialog` for parse errors. Use `ProjectTree` once Task 4 Step 7 updates it.
+Create `src/components/workbench/resource-explorer.tsx`:
 
-Core props:
+```tsx
+import { useState, type DragEvent, type InputHTMLAttributes } from "react";
+import type { UploadedProject } from "@/types/deploy";
+import { ProjectTree } from "@/components/project-tree";
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-```ts
 type ResourceExplorerProps = {
   project: UploadedProject | null;
   selectedTomlPath: string;
@@ -911,24 +925,89 @@ type ResourceExplorerProps = {
   onSelectTarget: (path: string) => void;
   onUploadFiles: (files: File[]) => Promise<void> | void;
 };
-```
 
-Include:
+const directoryInputProps = {
+  webkitdirectory: "",
+  directory: ""
+} as InputHTMLAttributes<HTMLInputElement>;
 
-```tsx
-<Button type="button" variant={tomlOnly ? "secondary" : "outline"} onClick={() => setTomlOnly((value) => !value)}>
-  Toml only
-</Button>
-```
-
-For upload errors:
-
-```tsx
-try {
-  await onUploadFiles(files);
-} catch (error) {
-  setUploadError(error instanceof Error ? error.message : "Failed to parse upload.");
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to parse upload.";
 }
+
+export function ResourceExplorer({ project, selectedTomlPath, onSelectFile, onSelectTarget, onUploadFiles }: ResourceExplorerProps) {
+  const [tomlOnly, setTomlOnly] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const uploadFiles = async (files: File[]) => {
+    if (files.length === 0) {
+      return;
+    }
+
+    try {
+      await onUploadFiles(files);
+      setUploadError(null);
+    } catch (error) {
+      setUploadError(errorMessage(error));
+    }
+  };
+
+  const handleDrop = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    await uploadFiles(Array.from(event.dataTransfer.files));
+  };
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-3 p-3" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
+      <div className="space-y-2">
+        <Label htmlFor="project-folder">Project folder</Label>
+        <Input id="project-folder" type="file" multiple {...directoryInputProps} onChange={(event) => void uploadFiles(Array.from(event.target.files ?? []))} />
+      </div>
+
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{project?.rootName ?? "No project loaded"}</p>
+          {project ? <p className="text-caption text-muted-foreground">{project.metadata.fileCount} file(s)</p> : null}
+        </div>
+        <Button type="button" variant={tomlOnly ? "secondary" : "outline"} size="sm" onClick={() => setTomlOnly((value) => !value)}>
+          Toml only
+        </Button>
+      </div>
+
+      <ScrollArea className="min-h-0 flex-1 rounded-md border bg-background p-2">
+        {project ? (
+          <ProjectTree
+            nodes={project.tree}
+            selectedTomlPath={selectedTomlPath}
+            sourceOnly={tomlOnly}
+            onSelectPath={onSelectFile}
+            onSelectTarget={onSelectTarget}
+          />
+        ) : (
+          <p className="p-3 text-sm text-muted-foreground">Drop a project folder here or choose one above.</p>
+        )}
+      </ScrollArea>
+
+      <AlertDialog open={Boolean(uploadError)} onOpenChange={(open) => !open && setUploadError(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Upload failed</AlertDialogTitle>
+            <AlertDialogDescription>{uploadError}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>OK</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+```
+
+Export the props if tests or page code need them:
+
+```ts
+export type { ResourceExplorerProps };
 ```
 
 - [ ] **Step 7: Update ProjectTree for radio target selection**
@@ -945,7 +1024,7 @@ type ProjectTreeProps = {
 };
 ```
 
-For TOML files, render a shadcn-compatible raw `input type="radio"` only if no shadcn radio primitive exists. Explain in final implementation summary that no radio primitive exists in `src/components/ui`; this raw control is necessary for semantic single-select. Keep the file button for opening details and the radio for target selection.
+No shadcn radio primitive exists in `src/components/ui`, so use a raw `input type="radio"` for the single-select deploy target. Keep the file button for opening details and the radio for target selection.
 
 Use accessible label:
 
@@ -1112,11 +1191,21 @@ Expected: fail because components do not exist.
 
 - [ ] **Step 4: Implement RunOutputTab**
 
-Create `src/components/workbench/run-output-tab.tsx`. Use `ScrollArea`, `Button`, `Badge`, `Tooltip` or `Dialog`/popover if no popover primitive exists. For the first pass, use a compact `details`/`summary` only if acceptable; otherwise use shadcn `Dialog` triggered by `Env`.
+Create `src/components/workbench/run-output-tab.tsx`:
 
-Required helpers:
+```tsx
+import { CheckCircle2, Copy, Loader2 } from "lucide-react";
+import type { WorkbenchTab } from "@/types/workbench";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-```ts
+type RunOutputTabProps = {
+  tab: WorkbenchTab;
+  onRetryTransaction: (tab: WorkbenchTab) => void;
+};
+
 function getTxHash(raw: unknown) {
   return raw && typeof raw === "object" && "transactionHash" in raw ? String((raw as { transactionHash?: unknown }).transactionHash) : undefined;
 }
@@ -1124,18 +1213,89 @@ function getTxHash(raw: unknown) {
 function copyJson(value: unknown) {
   return navigator.clipboard.writeText(JSON.stringify(value, null, 2));
 }
+
+function JsonBlock({ value, label }: { value: unknown; label: string }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{label}</h3>
+        <Button type="button" variant="outline" size="sm" onClick={() => void copyJson(value)}>
+          <Copy />
+          Copy {label}
+        </Button>
+      </div>
+      <ScrollArea className="h-64 rounded-md border bg-card">
+        <div className="w-full overflow-x-auto p-4">
+          <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(value, null, 2)}</pre>
+        </div>
+      </ScrollArea>
+    </div>
+  );
+}
+
+function EnvDialog({ tab }: { tab: WorkbenchTab }) {
+  if (!tab.env) {
+    return null;
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm">
+          Env
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Run environment</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="h-80 rounded-md border bg-card">
+          <pre className="w-max min-w-full whitespace-pre p-4 text-sm">{JSON.stringify(tab.env, null, 2)}</pre>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function RunOutputTab({ tab, onRetryTransaction }: RunOutputTabProps) {
+  const txHash = getTxHash(tab.raw);
+  const abiItem = tab.env?.deployMethodAbiItem ?? tab.env?.buildMethodAbiItem;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge>{tab.status ?? "idle"}</Badge>
+          {tab.targetFile ? <Badge variant="outline">{tab.targetFile}</Badge> : null}
+          {tab.status === "loading" ? <Loader2 aria-label="Run loading" className="h-4 w-4 animate-spin text-muted-foreground" /> : null}
+        </div>
+        <EnvDialog tab={tab} />
+      </div>
+
+      {tab.error ? <p className="rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{tab.error}</p> : null}
+
+      {txHash ? (
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-caption text-muted-foreground">Transaction Hash</p>
+          <div className="flex items-start gap-2">
+            {tab.transactionRaw ? <CheckCircle2 aria-label="Transaction found" className="mt-0.5 h-4 w-4 text-primary" /> : <Loader2 aria-label="Transaction lookup pending" className="mt-0.5 h-4 w-4 animate-spin text-muted-foreground" />}
+            <p className="break-all font-mono text-sm">{txHash}</p>
+          </div>
+          {!tab.transactionRaw && tab.kind === "deploy-history" ? (
+            <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => onRetryTransaction(tab)}>
+              Retry
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {tab.raw ? <JsonBlock value={tab.raw} label="Raw" /> : null}
+      {tab.transactionRaw ? <JsonBlock value={tab.transactionRaw} label="Transaction" /> : null}
+      {abiItem ? <JsonBlock value={abiItem} label="ABI" /> : null}
+    </div>
+  );
+}
 ```
-
-Render:
-
-- status badge
-- loading text when `tab.status === "loading"`
-- error panel when `tab.error`
-- raw JSON scroll area and `Copy Raw`
-- transaction hash with `Loader2` while no `transactionRaw`, `CheckCircle2` when present
-- transaction raw JSON and `Copy Transaction`
-- ABI item from `tab.env.deployMethodAbiItem ?? tab.env.buildMethodAbiItem` and `Copy ABI`
-- `Env` compact trigger that shows `JSON.stringify(tab.env, null, 2)`
 
 - [ ] **Step 5: Implement ActionDeck**
 
@@ -1244,7 +1404,6 @@ git commit -m "feat: add workbench run outputs"
 **Files:**
 - Modify: `src/pages/index.tsx`
 - Modify: `src/pages/index.test.tsx`
-- Modify: `src/store/deploy-session-store.ts` only if needed to remove obsolete page dependencies
 
 - [ ] **Step 1: Replace page tests with workbench behavior**
 
@@ -1311,12 +1470,10 @@ it("auto-builds before deploy when no build payload exists", async () => {
   await user.click(await screen.findByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
   await user.click(screen.getByRole("button", { name: "Deploy demo/Cargo.toml" }));
 
-  await screen.findByText("deploy_Cargo.toml_");
+  await screen.findByText((text) => text.startsWith("deploy_Cargo.toml_"));
   expect(dispatchSelectedMethodMock).toHaveBeenCalledTimes(2);
 });
 ```
-
-The implementation may need to match tab title text with a partial matcher if timestamps are rendered as part of a longer label.
 
 - [ ] **Step 2: Run page tests to verify failures**
 
@@ -1388,7 +1545,25 @@ function openOrUpdateFileTab(path: string) {
 }
 ```
 
-Use `FileDetailTab` in `renderTabContent` by finding TOML content and file size from `uploadedProject`.
+Add these helpers for rendering file detail content:
+
+```ts
+function filePathFor(file: File) {
+  return ((file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name).replace(/^\/+/, "");
+}
+
+function findProjectFile(path: string) {
+  return uploadedProject?.files.find((file) => filePathFor(file) === path);
+}
+
+function renderFileDetail(tab: WorkbenchTab) {
+  const path = tab.targetFile ?? "";
+  const toml = uploadedProject?.tomlFiles.find((file) => file.path === path);
+  const file = findProjectFile(path);
+
+  return <FileDetailTab filePath={path} fileSize={toml?.size ?? file?.size ?? 0} tomlContent={toml?.content} />;
+}
+```
 
 - [ ] **Step 5: Implement upload handler**
 
@@ -1409,67 +1584,245 @@ ResourceExplorer catches and dialogs errors.
 
 - [ ] **Step 6: Implement build runner**
 
-Implement `runBuildForTarget(targetPath, tabId)`:
-
-- Validate settings parsed ABI and selected project.
-- Find build method.
-- Create build args with `prepareBuildMethodCall`.
-- Call `dispatchSelectedMethod`.
-- Hash payload.
-- Create `ReviewPayload`.
-- Store `buildPayloadByTarget[targetPath]`.
-- Update tab with raw, env, status success.
-- On error update tab with full error.
-
-Use the selected TOML path by updating `uploadedProject.selectedTomlPath` before calling `prepareBuildMethodCall`:
+Implement these helpers in `src/pages/index.tsx`:
 
 ```ts
-const projectForTarget = { ...uploadedProject, selectedTomlPath: targetPath };
+function errorText(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function createEnv(buildMethod?: NormalizedAbiMethod, deployMethod?: NormalizedAbiMethod): WorkbenchEnv {
+  return {
+    rpcEndpoint: settings.rpcEndpoint,
+    lyquidId: settings.lyquidId,
+    walletAddress: account.address,
+    buildMethod: settings.buildMethod,
+    deployMethod: settings.deployMethod,
+    buildMethodAbiItem: buildMethod?.abiItem,
+    deployMethodAbiItem: deployMethod?.abiItem
+  };
+}
+
+async function runBuildForTarget(targetPath: string, tabId: string) {
+  if (!settings.parsedAbi || !uploadedProject) {
+    const message = "Upload and valid ABI settings are required.";
+    updateTab(tabId, { status: "error", error: message });
+    throw new Error(message);
+  }
+
+  const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
+
+  if (!buildMethod) {
+    const message = "Selected build method does not exist.";
+    updateTab(tabId, { status: "error", error: message });
+    throw new Error(message);
+  }
+
+  try {
+    const projectForTarget = { ...uploadedProject, selectedTomlPath: targetPath };
+    const { args, sourceHash } = await prepareBuildMethodCall({ method: buildMethod, project: projectForTarget });
+    const raw = await dispatchSelectedMethod({
+      parsedAbi: settings.parsedAbi,
+      selectedMethod: settings.buildMethod,
+      args,
+      context: {
+        rpcEndpoint: settings.rpcEndpoint,
+        lyquidId: settings.lyquidId,
+        accountAddress: account.address,
+        offChainFetch: (input, init) => fetch(input, init)
+      }
+    });
+    const artifactHash = await hashPayload(raw);
+    const reviewPayload: ReviewPayload = {
+      hashes: { sourceHash, artifactHash },
+      payload: raw
+    };
+
+    setBuildPayloadByTarget((current) => ({ ...current, [targetPath]: reviewPayload }));
+    updateTab(tabId, { status: "success", raw, env: createEnv(buildMethod) });
+    return reviewPayload;
+  } catch (error) {
+    const message = errorText(error, "Build failed.");
+    updateTab(tabId, { status: "error", error: message, env: createEnv(buildMethod) });
+    throw error;
+  }
+}
 ```
 
 - [ ] **Step 7: Implement Build click**
 
-Create tab:
+Add this handler:
 
 ```ts
-const timestamp = Date.now();
-const tabId = `build:${selectedTomlPath}:${timestamp}`;
-appendTab({ id: tabId, kind: "build-run", title: runTitle("build", selectedTomlPath, timestamp), createdAt: timestamp, status: "loading", targetFile: selectedTomlPath });
-await runBuildForTarget(selectedTomlPath, tabId);
+async function handleBuild() {
+  if (!selectedTomlPath) {
+    return;
+  }
+
+  const timestamp = Date.now();
+  const tabId = `build:${selectedTomlPath}:${timestamp}`;
+  appendTab({
+    id: tabId,
+    kind: "build-run",
+    title: runTitle("build", selectedTomlPath, timestamp),
+    createdAt: timestamp,
+    status: "loading",
+    targetFile: selectedTomlPath
+  });
+
+  try {
+    setIsBuilding(true);
+    await runBuildForTarget(selectedTomlPath, tabId);
+  } finally {
+    setIsBuilding(false);
+  }
+}
 ```
 
 - [ ] **Step 8: Implement Deploy click**
 
-Create deploy tab. If no build payload for selected target:
+Add this deploy handler shape:
 
-- Update deploy tab with build loading.
-- Call `runBuildForTarget(selectedTomlPath, deployTabId)` in a mode that returns payload and does not replace deploy tab kind/title.
-- If build fails, stop and leave error in deploy tab.
+```ts
+async function handleDeploy() {
+  if (!selectedTomlPath) {
+    return;
+  }
 
-Then:
+  const timestamp = Date.now();
+  const tabId = `deploy:${selectedTomlPath}:${timestamp}`;
+  appendTab({
+    id: tabId,
+    kind: "deploy-run",
+    title: runTitle("deploy", selectedTomlPath, timestamp),
+    createdAt: timestamp,
+    status: "loading",
+    targetFile: selectedTomlPath
+  });
 
-- Validate wallet.
-- Find deploy method and build method.
-- Call `prepareDeployMethodCall`.
-- Call `dispatchSelectedMethod` with `createBrowserWalletTransactionClient`.
-- Update deploy tab with deploy raw and txHash.
-- Add deploy history record after txHash exists.
+  try {
+    setIsDeploying(true);
+
+    if (!account.address) {
+      throw new Error("Connect wallet before deploying.");
+    }
+
+    if (!settings.parsedAbi || !uploadedProject) {
+      throw new Error("Upload and valid ABI settings are required.");
+    }
+
+    const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
+    const deployMethod = findMethod(settings.parsedAbi, settings.deployMethod);
+
+    if (!buildMethod || !deployMethod) {
+      throw new Error("Selected deploy method does not exist.");
+    }
+
+    let reviewPayload = buildPayloadByTarget[selectedTomlPath];
+
+    if (!reviewPayload) {
+      reviewPayload = await runBuildForTarget(selectedTomlPath, tabId);
+      updateTab(tabId, { status: "loading" });
+    }
+
+    const { args } = prepareDeployMethodCall({
+      buildMethod,
+      deployMethod,
+      project: { ...uploadedProject, selectedTomlPath },
+      reviewPayload
+    });
+    const raw = await dispatchSelectedMethod({
+      parsedAbi: settings.parsedAbi,
+      selectedMethod: settings.deployMethod,
+      args,
+      context: {
+        rpcEndpoint: settings.rpcEndpoint,
+        lyquidId: settings.lyquidId,
+        accountAddress: account.address,
+        walletClient: createBrowserWalletTransactionClient((window as BrowserWindowWithWallet).ethereum),
+        offChainFetch: (input, init) => fetch(input, init)
+      }
+    });
+    const transactionHash = typeof raw === "object" && raw && "transactionHash" in raw ? String(raw.transactionHash) : undefined;
+    const env = createEnv(buildMethod, deployMethod);
+
+    updateTab(tabId, { status: "success", raw, env });
+
+    if (transactionHash?.startsWith("0x")) {
+      addDeployHistory({
+        id: `${transactionHash}:${timestamp}`,
+        txHash: transactionHash as `0x${string}`,
+        timestamp,
+        targetFile: selectedTomlPath,
+        status: "submitted",
+        env
+      });
+    }
+  } catch (error) {
+    updateTab(tabId, { status: "error", error: errorText(error, "Deploy failed.") });
+  } finally {
+    setIsDeploying(false);
+  }
+}
+```
 
 - [ ] **Step 9: Implement history open and retry**
 
-When opening history:
+Add these helpers:
 
-- Create or focus tab id `history:${record.id}`.
-- Set status loading.
-- Call `fetchRpcTransaction({ rpcEndpoint: record.env.rpcEndpoint, transactionHash: record.txHash, offChainFetch: fetch })`.
-- Update `transactionRaw` on success.
-- Update `error` on failure.
+```ts
+async function lookupHistoryTransaction(tabId: string, record: DeployHistoryRecord) {
+  updateTab(tabId, { status: "loading", error: undefined });
 
-Retry calls the same function with the historical record.
+  try {
+    const transactionRaw = await fetchRpcTransaction({
+      rpcEndpoint: record.env.rpcEndpoint,
+      transactionHash: record.txHash,
+      offChainFetch: (input, init) => fetch(input, init)
+    });
+    updateTab(tabId, { status: "success", transactionRaw });
+  } catch (error) {
+    updateTab(tabId, { status: "error", error: errorText(error, "Failed to fetch RPC transaction.") });
+  }
+}
+
+function openHistoryRecord(record: DeployHistoryRecord) {
+  const tabId = `history:${record.id}`;
+  setTabs((currentTabs) => {
+    const existing = currentTabs.find((tab) => tab.id === tabId);
+    if (existing) {
+      return currentTabs;
+    }
+
+    return [
+      ...currentTabs,
+      {
+        id: tabId,
+        kind: "deploy-history",
+        title: `history_${fileNameFromPath(record.targetFile)}_${record.timestamp}`,
+        createdAt: Date.now(),
+        status: "loading",
+        targetFile: record.targetFile,
+        raw: { transactionHash: record.txHash },
+        env: record.env
+      }
+    ];
+  });
+  setActiveTabId(tabId);
+  void lookupHistoryTransaction(tabId, record);
+}
+
+function retryTransaction(tab: WorkbenchTab) {
+  const record = deployHistory.find((item) => `history:${item.id}` === tab.id);
+  if (record) {
+    void lookupHistoryTransaction(tab.id, record);
+  }
+}
+```
 
 - [ ] **Step 10: Wire DeployWorkbench**
 
-Render:
+Replace the page return body with this workbench composition while preserving the existing `SettingsDialog` below `AppShell`:
 
 ```tsx
 <AppShell
@@ -1528,7 +1881,7 @@ Expected: pass.
 - [ ] **Step 12: Commit**
 
 ```bash
-git add src/pages/index.tsx src/pages/index.test.tsx src/store/deploy-session-store.ts
+git add src/pages/index.tsx src/pages/index.test.tsx
 git commit -m "feat: wire compiler workbench page"
 ```
 
@@ -1538,12 +1891,6 @@ git commit -m "feat: wire compiler workbench page"
 
 **Files:**
 - Modify: `docs/agent/registries.md`
-- Modify or delete obsolete wizard components only if they are no longer referenced and tests confirm removal is safe:
-  - `src/components/build-step.tsx`
-  - `src/components/review-step.tsx`
-  - `src/components/deploy-step.tsx`
-  - `src/components/shared/progress-steps.tsx`
-  - `src/config/deploy-steps-config.ts`
 
 - [ ] **Step 1: Find obsolete references**
 
@@ -1555,14 +1902,17 @@ rg -n "BuildStep|ReviewStep|DeployStep|ProgressSteps|deploySteps|currentStep|goT
 
 Expected: only tests or intentionally retained legacy files reference wizard components.
 
-- [ ] **Step 2: Remove or retain legacy files deliberately**
+- [ ] **Step 2: Keep legacy wizard files for now**
 
-If no production imports remain, either:
+Do not delete wizard files in this plan. Keep these files until a separate cleanup plan removes their tests and registry entries:
 
-- Delete obsolete wizard components and their obsolete tests, or
-- Keep them if deleting would create unnecessary churn.
+- `src/components/build-step.tsx`
+- `src/components/review-step.tsx`
+- `src/components/deploy-step.tsx`
+- `src/components/shared/progress-steps.tsx`
+- `src/config/deploy-steps-config.ts`
 
-Preferred: delete only files with zero production imports and update tests accordingly. Do not delete shared request utilities.
+This keeps the workbench migration focused and avoids bundling unrelated deletion churn into the UI rewrite.
 
 - [ ] **Step 3: Update registries**
 
@@ -1579,7 +1929,7 @@ Ensure `docs/agent/registries.md` accurately lists:
 - `workbench-config`
 - Updated `file-utils`
 
-Mark obsolete wizard-only shared components as deprecated only if they remain in source and are no longer used by the page.
+Mark wizard-only shared components as deprecated if they remain in source and are no longer used by `src/pages/index.tsx`.
 
 - [ ] **Step 4: Full test suite**
 
