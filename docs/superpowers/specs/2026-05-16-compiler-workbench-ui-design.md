@@ -30,12 +30,11 @@ The old progress navigation is removed. Workflow state appears through selected 
 The upload area supports:
 
 - Clicking to select a folder.
-- Clicking to select a zip.
-- Dragging in a folder or zip.
+- Dragging in a folder.
 
-Folder uploads use browser relative paths. Zip uploads are unpacked client-side. If the zip contains exactly one top-level directory, that directory becomes the project root. If it contains multiple top-level entries, the original top-level structure is preserved.
+Folder uploads use browser relative paths. Zip uploads are not supported.
 
-Parsing success produces a current-session resource tree, TOML list, file metadata, and selectable build targets. Parsing failure opens a dialog with the failure reason. Failure cases include unreadable input, empty zip, empty folder, invalid zip, or no usable files.
+Parsing success produces a current-session resource tree, TOML list, file metadata, and selectable build targets. Parsing failure opens a dialog with the failure reason. Failure cases include unreadable input, empty folder, no TOML targets, or no usable files.
 
 The resource tree defaults to showing the full uploaded structure. A `Toml only` switch filters the tree to paths containing TOML files.
 
@@ -168,7 +167,7 @@ No IndexedDB is introduced for this design.
 
 ## Error Handling
 
-Use a dialog for upload and zip parsing failures because the resource tree cannot be established.
+Use a dialog for upload parsing failures because the resource tree cannot be established.
 
 Write action failures into the relevant output tab:
 
@@ -183,7 +182,6 @@ Error messages should include the concrete reason returned by the failing layer.
 
 Cover the behavior with focused component, store, and utility tests:
 
-- Zip root normalization uses the single-top-level-directory rule.
 - Upload parse failures open an error dialog with the failure reason.
 - TOML single-selection is required before actions appear.
 - `Toml only` filters the resource tree.
