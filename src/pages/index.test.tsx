@@ -76,14 +76,14 @@ describe("HomePage", () => {
   it("renders upload as the first step", () => {
     renderWithProviders(<HomePage />);
     expect(screen.getByText("Cloud Deploy")).toBeInTheDocument();
-    expect(screen.getByLabelText("Project folder")).toBeInTheDocument();
+    expect(screen.getByLabelText("Drop a folder here or choose one.")).toBeInTheDocument();
     expect(screen.queryByText("Upload")).not.toBeInTheDocument();
   });
 
   it("shows build and deploy actions after explicitly selecting a TOML target", async () => {
     const user = userEvent.setup();
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Project folder"), [
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
       folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
       folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
     ]);
@@ -93,6 +93,20 @@ describe("HomePage", () => {
 
     expect(screen.getByRole("button", { name: "Build" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deploy" })).toBeInTheDocument();
+  });
+
+  it("opens the TOML file content when selecting a deploy target", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<HomePage />);
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
+      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
+      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
+    ]);
+    await user.click(await screen.findByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
+
+    expect(screen.getByRole("tab", { name: "Cargo.toml" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByDisplayValue(/name = "demo"/)).toHaveAttribute("readonly");
   });
 
   it("auto-builds before deploy when no build payload exists for the selected target", async () => {
@@ -108,7 +122,7 @@ describe("HomePage", () => {
       .mockResolvedValueOnce({ transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318", status: "submitted" });
 
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Project folder"), [
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
       folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
       folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
     ]);
@@ -136,7 +150,7 @@ describe("HomePage", () => {
     fetchRpcTransactionMock.mockResolvedValue({ hash: transactionHash, input: "0xabcdef" });
 
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Project folder"), [
+    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
       folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
       folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
     ]);

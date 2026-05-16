@@ -81,6 +81,11 @@ export default function HomePage() {
     });
   };
 
+  const handleSelectTarget = (path: string) => {
+    setSelectedTomlPath(path);
+    openFileTab(path);
+  };
+
   const closeTab = (tabId: string) => {
     setTabs((current) => {
       const nextTabs = current.filter((tab) => tab.id !== tabId);
@@ -269,7 +274,7 @@ export default function HomePage() {
                 setTabs([]);
                 setActiveTabId(null);
               }}
-              onSelectTarget={setSelectedTomlPath}
+              onSelectTarget={handleSelectTarget}
               onOpenFile={openFileTab}
             />
           }
