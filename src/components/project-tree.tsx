@@ -8,6 +8,9 @@ type ProjectTreeProps = {
   selectedTomlPath: string;
   sourceOnly: boolean;
   onSelectPath: (path: string) => void;
+  onSelectTarget?: (path: string) => void;
+  showTargetSelector?: boolean;
+  fileActionLabel?: "Open" | "Select";
 };
 
 function isBuildTargetFile(path: string) {
@@ -68,13 +71,19 @@ function ProjectTreeNodes({
   expandedPaths,
   selectedTomlPath,
   onTogglePath,
-  onSelectPath
+  onSelectPath,
+  onSelectTarget,
+  showTargetSelector,
+  fileActionLabel
 }: {
   nodes: ProjectTreeNode[];
   expandedPaths: Set<string>;
   selectedTomlPath: string;
   onTogglePath: (path: string) => void;
   onSelectPath: (path: string) => void;
+  onSelectTarget: (path: string) => void;
+  showTargetSelector: boolean;
+  fileActionLabel: "Open" | "Select";
 }) {
   return (
     <div className="space-y-1">
@@ -103,6 +112,9 @@ function ProjectTreeNodes({
                     selectedTomlPath={selectedTomlPath}
                     onTogglePath={onTogglePath}
                     onSelectPath={onSelectPath}
+                    onSelectTarget={onSelectTarget}
+                    showTargetSelector={showTargetSelector}
+                    fileActionLabel={fileActionLabel}
                   />
                 </div>
               ) : null}
@@ -111,12 +123,22 @@ function ProjectTreeNodes({
         }
 
         return (
-          <div key={node.path} className="space-y-1">
+          <div key={node.path} className="flex items-center gap-2">
+            {showTargetSelector && node.name.endsWith(".toml") ? (
+              <input
+                type="radio"
+                name="workbench-target"
+                className="h-4 w-4 accent-primary"
+                aria-label={`Use ${node.path} as deploy target`}
+                checked={selectedTomlPath === node.path}
+                onChange={() => onSelectTarget(node.path)}
+              />
+            ) : null}
             <Button
               type="button"
-              variant={selectedTomlPath === node.path ? "secondary" : "ghost"}
-              className="h-auto w-full justify-start gap-2 px-2 py-1 text-left"
-              aria-label={`Select ${node.path}`}
+              variant="ghost"
+              className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1 text-left"
+              aria-label={`${fileActionLabel} ${node.path}`}
               onClick={() => onSelectPath(node.path)}
             >
               {node.name.endsWith(".toml") ? <FileText className="h-4 w-4" /> : <File className="h-4 w-4" />}
@@ -129,7 +151,15 @@ function ProjectTreeNodes({
   );
 }
 
-export function ProjectTree({ nodes, selectedTomlPath, sourceOnly, onSelectPath }: ProjectTreeProps) {
+export function ProjectTree({
+  nodes,
+  selectedTomlPath,
+  sourceOnly,
+  onSelectPath,
+  onSelectTarget = onSelectPath,
+  showTargetSelector = false,
+  fileActionLabel = "Select"
+}: ProjectTreeProps) {
   const visibleNodes = useMemo(() => (sourceOnly ? filterBuildTargetTree(nodes) : nodes), [nodes, sourceOnly]);
   const [expandedPaths, setExpandedPaths] = useState(() =>
     sourceOnly ? collectAllDirectoryPaths(filterBuildTargetTree(nodes)) : collectDirectoryPaths(nodes)
@@ -155,6 +185,9 @@ export function ProjectTree({ nodes, selectedTomlPath, sourceOnly, onSelectPath 
         selectedTomlPath={selectedTomlPath}
         onTogglePath={handleTogglePath}
         onSelectPath={onSelectPath}
+        onSelectTarget={onSelectTarget}
+        showTargetSelector={showTargetSelector}
+        fileActionLabel={fileActionLabel}
       />
     </div>
   );
