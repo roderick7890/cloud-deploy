@@ -31,6 +31,8 @@ The `Key Props` column is a selection aid. The component's exported props type i
 | `ConstructorParamsForm` | `src/components/shared/constructor-params-form.tsx` | active | Renders constructor inputs from ABI-derived fields and returns collected values | `constructorFields`, `values`, `onValuesChange` | A target Lyquid constructor schema must be collected | Uses `Input`, `Label` |
 | `PayloadReviewPanel` | `src/components/shared/payload-review-panel.tsx` | active | Displays hashes, prepared/deploy payload, raw JSON, copy, and download actions | `hashes`, `payload`, `onCopy`, `onDownload` | Step 3 reviews build/deploy output | Uses `Button`, `ScrollArea` |
 | `ResultSummary` | `src/components/shared/result-summary.tsx` | active | Displays deploy result fields, raw response, transaction lookup state, collapsible calldata, and copyable deploy ABI | `result` | Step 4 displays deployment result | Uses `Badge`, `Button`, `ScrollArea` |
+| `DeployWorkbench` | `src/components/workbench/deploy-workbench.tsx` | active | Composes the four resizable compiler workbench panes | `layout`, `onLayoutChange`, pane render props | Rendering the workbench page shell | Uses `ResizeHandle` |
+| `ResizeHandle` | `src/components/workbench/resizable-panels.tsx` | active | Pointer-driven splitter handle for workbench panes | `ariaLabel`, `orientation`, `onDrag` | Resizing workbench panes | Raw `div` with separator role |
 
 Example conflict rule:
 

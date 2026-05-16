@@ -6,15 +6,16 @@ import { ProgressSteps } from "@/components/shared/progress-steps";
 
 type AppShellProps = {
   children: ReactNode;
-  currentStep: DeployStepId;
-  completedSteps: DeployStepId[];
+  currentStep?: DeployStepId;
+  completedSteps?: DeployStepId[];
   walletLabel: string;
   walletAddress?: string;
   onConnectWallet: () => void;
   onCopyWalletAddress: () => void;
   onDisconnectWallet: () => void;
   onOpenSettings: () => void;
-  onStepBack: (step: DeployStepId) => void;
+  onStepBack?: (step: DeployStepId) => void;
+  showProgress?: boolean;
 };
 
 export function AppShell({
@@ -27,7 +28,8 @@ export function AppShell({
   onCopyWalletAddress,
   onDisconnectWallet,
   onOpenSettings,
-  onStepBack
+  onStepBack,
+  showProgress = true
 }: AppShellProps) {
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -40,10 +42,12 @@ export function AppShell({
         onOpenSettings={onOpenSettings}
       />
       <main className="flex min-h-0 flex-1 flex-col">
-        <section className="border-b bg-card px-6 py-5">
-          <ProgressSteps steps={deploySteps} currentStep={currentStep} completedSteps={completedSteps} onStepBack={onStepBack} />
-        </section>
-        <section className="min-h-0 flex-1 overflow-y-auto px-6 py-6">{children}</section>
+        {showProgress && currentStep && completedSteps && onStepBack ? (
+          <section className="border-b bg-card px-6 py-5">
+            <ProgressSteps steps={deploySteps} currentStep={currentStep} completedSteps={completedSteps} onStepBack={onStepBack} />
+          </section>
+        ) : null}
+        <section className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</section>
       </main>
     </div>
   );

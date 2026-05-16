@@ -25,4 +25,21 @@ describe("AppShell", () => {
     expect(screen.getByText(deploySteps[0].label)).toBeInTheDocument();
     expect(screen.getByText("Upload content")).toBeInTheDocument();
   });
+
+  it("can render without progress navigation for workbench mode", () => {
+    renderWithProviders(
+      <AppShell
+        walletLabel="Connect Wallet"
+        onConnectWallet={vi.fn()}
+        onCopyWalletAddress={vi.fn()}
+        onDisconnectWallet={vi.fn()}
+        onOpenSettings={vi.fn()}
+      >
+        <p>Workbench body</p>
+      </AppShell>
+    );
+
+    expect(screen.getByText("Workbench body")).toBeInTheDocument();
+    expect(screen.queryByText(deploySteps[0].label)).not.toBeInTheDocument();
+  });
 });
