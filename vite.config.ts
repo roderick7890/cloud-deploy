@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { IncomingMessage } from "node:http";
 import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, type Plugin } from "vite";
 
 const devProxyPath = "/__cloud-deploy-proxy";
@@ -104,7 +105,7 @@ function cloudDeployDevProxy(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), cloudDeployDevProxy()],
+  plugins: [react(), tailwindcss(), cloudDeployDevProxy()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src")
