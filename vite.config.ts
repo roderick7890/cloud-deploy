@@ -6,6 +6,8 @@ import { defineConfig, type Plugin } from "vite";
 
 const devProxyPath = "/__cloud-deploy-proxy";
 const skippedResponseHeaders = new Set(["connection", "content-encoding", "content-length", "transfer-encoding"]);
+const githubRepositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "cloud-deploy";
+const githubPagesBase = process.env.GITHUB_PAGES_BASE ?? `/${githubRepositoryName}/`;
 
 function readBody(request: IncomingMessage) {
   return new Promise<Buffer>((resolve, reject) => {
@@ -105,6 +107,7 @@ function cloudDeployDevProxy(): Plugin {
 }
 
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === "true" ? githubPagesBase : "/",
   plugins: [react(), tailwindcss(), cloudDeployDevProxy()],
   resolve: {
     alias: {
