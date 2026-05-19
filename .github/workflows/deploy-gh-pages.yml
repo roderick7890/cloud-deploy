@@ -37,7 +37,10 @@ jobs:
         run: npm run build
 
       - name: Add SPA fallback
-        run: cp dist/index.html dist/404.html
+        run: |
+          cp dist/index.html dist/404.html
+          mkdir -p dist/legacy
+          cp dist/index.html dist/legacy/index.html
 
       - name: Publish dist to gh-pages
         run: |

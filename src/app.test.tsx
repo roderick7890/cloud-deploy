@@ -23,4 +23,12 @@ describe("App routing", () => {
 
     expect(screen.getByText("Legacy route")).toBeInTheDocument();
   });
+
+  it("matches legacy under the GitHub Pages base path with a trailing slash", () => {
+    window.history.pushState({}, "", "/cloud-deploy/legacy/");
+
+    renderWithProviders(<App />);
+
+    expect(screen.getByText("Legacy route")).toBeInTheDocument();
+  });
 });
