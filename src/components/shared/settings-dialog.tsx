@@ -34,15 +34,15 @@ export function SettingsDialog({ open, onOpenChange, settings, methodOptions, me
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="rpc-endpoint">RPC Endpoint</Label>
-            <Input id="rpc-endpoint" value={draft.rpcEndpoint} onChange={(event) => setDraft({ ...draft, rpcEndpoint: event.target.value })} />
+            <Input className="w-full" id="rpc-endpoint" value={draft.rpcEndpoint} onChange={(event) => setDraft({ ...draft, rpcEndpoint: event.target.value })} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="lyquid-id">Lyquid ID</Label>
-            <Input id="lyquid-id" value={draft.lyquidId} onChange={(event) => setDraft({ ...draft, lyquidId: event.target.value })} />
+            <Input className="w-full" id="lyquid-id" value={draft.lyquidId} onChange={(event) => setDraft({ ...draft, lyquidId: event.target.value })} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="abi">ABI</Label>
-            <Textarea id="abi" rows={8} value={draft.abi} onChange={(event) => setDraft({ ...draft, abi: event.target.value })} aria-invalid={Boolean(visibleMethodErrors.abi)} />
+            <Textarea className="w-full" id="abi" rows={8} value={draft.abi} onChange={(event) => setDraft({ ...draft, abi: event.target.value })} aria-invalid={Boolean(visibleMethodErrors.abi)} />
             {visibleMethodErrors.abi ? <p className="text-caption text-destructive">{visibleMethodErrors.abi}</p> : null}
           </div>
           <AbiMethodSelect

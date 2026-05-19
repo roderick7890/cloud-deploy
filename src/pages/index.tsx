@@ -288,7 +288,13 @@ export default function HomePage() {
               onCloseTab={closeTab}
               renderTabContent={(tab) =>
                 tab.kind === "file-detail" && currentProject ? (
-                  <FileDetailTab onDeploy={() => void runDeploy()} path={tab.targetFile ?? ""} files={currentProject.files} tomlFiles={currentProject.tomlFiles} />
+                  <FileDetailTab
+                    path={tab.targetFile ?? ""}
+                    files={currentProject.files}
+                    tomlFiles={currentProject.tomlFiles}
+                    onBack={() => closeTab(tab.id)}
+                    onDeploy={() => void runDeploy()}
+                  />
                 ) : (
                   <RunOutputTab tab={tab} />
                 )

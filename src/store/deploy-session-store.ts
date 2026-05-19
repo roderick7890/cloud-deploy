@@ -68,7 +68,8 @@ export const useDeploySessionStore = create<DeploySessionState>()((set) => ({
   setDeployResult: (result) =>
     set({
       deployResult: result,
-      currentError: null
+      currentError: null,
+      currentStep: "review"
     }),
   setCurrentError: (error) => set({ currentError: error }),
   goToStep: (step) => set({ currentStep: step }),

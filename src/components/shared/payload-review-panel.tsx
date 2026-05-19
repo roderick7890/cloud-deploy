@@ -19,17 +19,17 @@ const hashLabels: Array<[keyof DeploymentHashes, string]> = [
 export function PayloadReviewPanel({ hashes, payload, onCopy, onDownload }: PayloadReviewPanelProps) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className="flex flex-wrap gap-3">
         {hashLabels
           .filter(([key]) => hashes[key])
           .map(([key, label]) => (
-            <div key={key} className="rounded-md border bg-card p-3">
+            <div key={key} className="min-w-0 flex-1 basis-72 rounded-md border bg-card p-3">
               <p className="text-caption text-muted-foreground">{label}</p>
               <p className="font-mono text-sm">{shortHash(hashes[key])}</p>
             </div>
           ))}
       </div>
-      <div className="h-64 w-full max-w-full overflow-auto rounded-md border bg-card">
+      <div className="max-h-64 w-full max-w-full overflow-auto rounded-md border bg-card">
         <div data-json-scroll-content="true" className="w-full max-w-full p-4">
           <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(payload, null, 2)}</pre>
         </div>

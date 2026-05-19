@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchRpcTransaction } from "./rpc-transaction-client";
+import { fetchRpcTransaction, fetchRpcTransactionResponse } from "./rpc-transaction-client";
 
 describe("rpc-transaction-client", () => {
   it("fetches transaction details by hash from the configured RPC endpoint", async () => {
@@ -41,5 +41,28 @@ describe("rpc-transaction-client", () => {
         })
       })
     );
+  });
+
+  it("can return the raw transaction RPC response for debug surfaces", async () => {
+    const rawResponse = {
+      jsonrpc: "2.0",
+      id: "transaction",
+      result: {
+        hash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
+        input: "0xabcdef"
+      }
+    };
+    const offChainFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(rawResponse)
+    } as Response);
+
+    await expect(
+      fetchRpcTransactionResponse({
+        rpcEndpoint: "http://127.0.0.1:10087/api",
+        transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
+        offChainFetch
+      })
+    ).resolves.toEqual(rawResponse);
   });
 });

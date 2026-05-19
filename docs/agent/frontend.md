@@ -1,30 +1,44 @@
-# Frontend Development Rules
+# React Frontend Development Rules
 
-Use this file when adding or changing Cloud Deploy frontend code.
+Use this file when adding or changing React frontend code. Pair it with `docs/agent/project.md` for Cloud Deploy-specific framework, routing, registry, wallet, request, and product constraints.
 
 If a task follows this file, mention `Followed docs/agent/frontend.md frontend rules.` in the final response.
 
 ## Stack
 
-Use this frontend stack:
+Use the project's existing frontend stack by default.
 
-- Tailwind CSS for styling.
-- shadcn/ui for UI primitives and composed controls.
-- Zustand for client state.
-- `zustand.persist` for persisted local settings.
-- wagmi for wallet connection and account state.
-- viem for ABI parsing, encoding, transaction calls, and RPC interaction.
+- Keep the current framework and build tool unless the project owner explicitly approves a migration.
+- Use Tailwind CSS when the project already uses Tailwind.
+- Use shadcn/ui for generic UI primitives and composed controls when it is installed.
+- Use the existing router or app-owned route selection implementation. Pages-style route file naming under `src/pages` is a convention, not a requirement to use Next.js.
+- Use the existing state, wallet, chain, and request libraries. Add specialized state, wallet, chain, or request libraries only when the project requires them and the project owner approves or the project guide calls for them.
 
-Do not introduce another UI framework, CSS system, wallet library, or global state library unless the project owner explicitly approves it.
+Do not introduce another UI framework, CSS system, router, wallet library, chain library, request library, or global state library unless the project owner explicitly approves it.
 
 ## Project Shape
 
-Use Next.js Pages Router conventions under `src/pages`.
+Project-specific guides own product identity and active framework details.
 
-- Use `src/pages` for route files.
-- Do not use Next.js App Router unless the project owner explicitly approves it.
+- Current route files should live under `src/pages` when the project uses a pages-style source layout.
+- Pages-style naming means route files such as `index.tsx`, `legacy.tsx`, and `[id].tsx`.
+- `[id].tsx` means a dynamic route segment in the file naming convention. It does not imply Next.js is installed.
 - Do not introduce another router unless the project owner explicitly approves it.
-- Keep this as a frontend web tool. Do not turn it into a landing page or a broad management console.
+- Do not force workflow assumptions from another project. Cloud Deploy-specific workflow rules live in `docs/agent/project.md`.
+
+## Default Visual Direction
+
+When there is no design file or the product request is abstract, use a Vercel-inspired operational UI direction by default.
+
+This means:
+
+- restrained neutral surfaces, clear borders, strong typography hierarchy, and minimal decoration
+- direct product/tool screens instead of marketing pages
+- compact, scannable layouts optimized for repeated work
+- clear hover, focus, disabled, loading, success, and error states
+- shadcn/ui wrappers for controls, but not a generic shadcn demo-page look
+
+Do not copy Vercel branding, marketing composition, or product-specific visual assets. Treat this as a default product-quality bar for sparse requirements.
 
 ## File Size
 
@@ -42,6 +56,7 @@ Split by responsibility, not by arbitrary line count. Prefer extracting:
 - page-local components into the page folder or a nearby business component
 - state logic into `src/store`
 - pure helpers into `src/utils`
+- reusable cross-boundary types into `src/types`
 - layout shell into `src/layout`
 
 ## Naming
@@ -50,7 +65,7 @@ Use lowercase kebab-case for files and folders.
 
 Examples:
 
-- `cloud-deploy-page.tsx`
+- `workbench-settings-dialog.tsx`
 - `settings-dialog.tsx`
 - `abi-method-select.tsx`
 - `deploy-progress.tsx`
@@ -71,11 +86,12 @@ Examples:
 
 - `SettingsDialog`
 - `AbiMethodSelect`
-- `DeployProgress`
+- `ProgressSteps`
+- `DeployWorkbench`
 
 ## Directory Layout
 
-Use this source layout:
+Prefer this source layout unless `docs/agent/project.md` documents a different current structure:
 
 ```text
 src/
@@ -86,35 +102,39 @@ src/
   pages/
   components/
     shared/
+    ui/
   utils/
   store/
+  types/
 ```
 
 Directory responsibilities:
 
 - `src/assets/images`: image assets and other static visual assets.
-- `src/config`: static app config, constants, defaults, route definitions, storage keys, deploy step definitions, upload limits, and option lists.
+- `src/config`: static app config, constants, defaults, route definitions, storage keys, upload limits, deploy step definitions, and option lists.
 - `src/layout`: global layout shells, app frame, header, and page chrome.
 - `src/pages`: route pages.
 - `src/components`: feature and business components.
 - `src/components/shared`: reusable shared components extracted from repeated business needs.
-- `src/utils`: pure helpers, formatters, parsers, ABI helpers, and request utilities.
-- `src/store`: Zustand stores and persisted state definitions.
+- `src/components/ui`: shadcn/ui wrappers and generic UI primitives.
+- `src/utils`: pure helpers, formatters, parsers, ABI helpers, request utilities, and domain helpers.
+- `src/store`: client stores and persisted state definitions when the project needs shared client state.
+- `src/types`: reusable TypeScript types that cross component, store, and utility boundaries.
 
 Do not create a separate `src/constants` directory. Constants belong in `src/config`.
 
-Route rules follow Next-style `src/pages` conventions:
+Route rules follow pages-style naming conventions:
 
 - `src/pages/index.tsx` maps to `/`.
-- `src/pages/deploy.tsx` maps to `/deploy`.
-- `src/pages/deploy/index.tsx` maps to `/deploy`.
-- `src/pages/deploy/[id].tsx` maps to `/deploy/:id`.
+- `src/pages/legacy.tsx` maps to `/legacy`.
+- `src/pages/deploy/index.tsx` maps to `/deploy` if a future deploy route is added.
+- `src/pages/deploy/[id].tsx` maps to `/deploy/:id` if a future dynamic deploy route is added.
 
 Use `/deploy/:id` only when describing the URL pattern. Use `[id].tsx` for the actual file name.
 
-## shadcn/ui First
+## Project UI Wrappers First
 
-Do not write raw form/control elements in application code when a shadcn/ui component or existing shared component can represent the same control.
+Do not write raw form/control elements in application code when a project-installed UI wrapper or existing shared component can represent the same control. In projects that have shadcn/ui installed, prefer shadcn/ui wrappers for generic controls.
 
 Raw layout and semantic elements are allowed:
 
@@ -133,26 +153,46 @@ Avoid raw interactive and form control elements such as:
 ```tsx
 <button />
 <input />
+<input type="checkbox" />
+<input type="radio" />
+<input type="file" />
 <textarea />
 <select />
 <label />
 <dialog />
 ```
 
-Preferred equivalents:
+For shadcn/ui projects, preferred equivalents:
 
 - `Button` for actions.
 - `Input` for single-line text.
 - `Textarea` for multiline text.
 - `Select` for dropdowns.
+- `Checkbox` for checkbox choices when installed.
+- `RadioGroup` for mutually exclusive choices when installed.
 - `Label` for field labels.
 - `Dialog` for settings, confirmations, and modal workflows.
+- `AspectRatio` for fixed-ratio media and visual containers when installed.
 - `Tabs` only when the product flow truly needs tabs.
 - `AlertDialog` for destructive or high-confirmation decisions.
-- `Progress` or a composed progress component for build/deploy progress.
-- `Toast` or `Sonner` for transient result and error messages, depending on the installed shadcn setup.
+- `Progress` or a composed progress component for progress indicators.
+- `Toast` or `Sonner` for transient result and error messages when installed.
 
-Raw HTML controls are allowed only inside shadcn/ui wrapper implementation files or when shadcn has no suitable primitive. If raw HTML is needed, explain why in the implementation summary.
+Do not bypass project-installed UI wrappers by changing raw input `type` values in app code. Raw HTML controls are allowed only inside UI wrapper implementation files or when the project has no suitable primitive. If raw HTML is needed, explain why in the implementation summary.
+
+## shadcn Wrapper Baseline
+
+After installing or regenerating shadcn/ui wrappers, adapt them to this project before using them in app code.
+
+- `Button` default size should be `content`, not a fixed-height size.
+- `Button` should include a `content` size whose dimensions come from padding and content. It must not set `width`, `height`, `min-width`, or `min-height`.
+- `Button` may keep a fixed `icon` size because icon-only buttons need a stable target.
+- `Input`, `Textarea`, and `SelectTrigger` wrappers should not force fixed `width`, `height`, `min-width`, or `min-height` by default.
+- Form controls should use padding, font size, and line-height for visual size. Parent layout owns full-width behavior through `className` only when the specific layout needs it.
+- Dialog and AlertDialog content wrappers should use flex column layout by default, not grid.
+- Keep fixed dimensions only for fixed-format primitives such as icon-only buttons, progress bars, separators, handles, and indicators.
+
+If a newly added shadcn component ships with fixed box classes, remove or override those fixed classes in the wrapper before using it. Document any intentional exception in `docs/agent/registries.md`.
 
 ## Tailwind Tokens
 
@@ -205,49 +245,94 @@ Avoid token names that only restate values:
 - `color-white`
 - `spacing-37`
 
+## Adaptive Layout
+
+Prefer flex-based adaptive layout by default.
+
+- Use `flex`, `flex-col`, `flex-wrap`, `flex-1`, content-driven padding, semantic spacing, and responsive constraints before fixed box sizes.
+- Avoid hardcoded `width`, `height`, `min-width`, and `min-height` in app markup unless the element has a fixed-format reason.
+- Use `max-width`, `max-height`, aspect ratio, overflow handling, and container constraints when bounding a surface is necessary.
+- Let text wrap or the container adapt when labels are unpredictable. Do not rely on fixed button or field dimensions to hide layout problems.
+- Use grid only when the content has a real two-dimensional relationship, such as matrix-like panels, table-adjacent alignment, boards, calendars, or fixed pane systems.
+- Do not use grid as the default way to place ordinary forms, toolbars, page sections, or card lists.
+
 ## Component Choice
 
 Choose components in this order:
 
 1. Existing shared component from `src/components/shared`.
-2. shadcn/ui primitive or composed shadcn component.
+2. shadcn/ui primitive or composed shadcn component from `src/components/ui`.
 3. Feature-specific business component under `src/components` or the page area.
 4. Raw HTML only when no library/shared component fits.
 
-Shared components take priority when they encode Cloud Deploy business behavior. shadcn/ui takes priority for generic UI primitives.
+Shared components take priority when they encode project business behavior. Shared components should still be composed from shadcn/ui primitives when those primitives fit. shadcn/ui takes priority for generic UI primitives.
 
-For reusable shared components, utilities, and config modules, use `docs/agent/registries.md`.
+For reusable shared components, utilities, stores, and config modules, use `docs/agent/registries.md`.
+
+## Loading States
+
+Use a shared spinner or progress component for submitting/loading actions when one exists instead of visible high-pressure waiting copy such as `Please wait...`.
+
+- Button submitting states should keep the control disabled and show stable progress or spinner affordances.
+- Keep accessible loading labels available to screen readers when needed.
+- Reuse the project's shared loading component when one exists.
+- For build/deploy workflows, prefer durable status inside the relevant tab or progress surface over transient copy that disappears before the user can inspect it.
+
+## Request Error Presentation
+
+Default API, RPC, wallet, and request failures should be presented through the workflow surface that owns the action.
+
+Use inline errors for states the user can act on in the current form or surface:
+
+- invalid RPC endpoint
+- invalid ABI JSON
+- missing or mismatched selected ABI method
+- missing wallet/account for wallet-required deploy
+- upload validation failures
+- missing TOML target selection
+
+Use workbench tabs, result panels, or toast notifications for generic request failures, depending on the installed UI and workflow context:
+
+- network failures
+- RPC errors
+- unknown backend errors
+- transaction lookup errors
+- off-chain sender errors
+- unexpected wallet provider errors
+
+Do not render raw transport errors as permanent page chrome unless the feature spec explicitly defines a blocking state. Preserve inspectable raw details in build/deploy output panels when that helps debugging.
 
 ## shadcn Component Map
 
-Use this map when choosing shadcn/ui primitives.
+Use this map when choosing common shadcn/ui primitives in projects that have shadcn/ui installed. This is not a full inventory. Use `src/components/ui` source files for generic installed shadcn paths and exports. Use the project registry only for customized, renamed, deprecated, project-specific shadcn wrappers or reusable business capabilities.
 
-| Component | Business Use | Important Props / Inputs |
+| Component | Common Use | Important Props / Inputs |
 | --- | --- | --- |
-| `Button` | Primary actions such as Build, Deploy, Back, Copy, Save Settings, Connect Wallet | `variant`, `size`, `disabled`, `onClick`, `type` |
-| `Input` | RPC endpoint, Lyquid ID, short constructor values | `value`, `onChange`, `placeholder`, `disabled`, `aria-invalid` |
-| `Textarea` | ABI JSON paste, raw payload display, logs preview when editable | `value`, `onChange`, `placeholder`, `readOnly`, `rows` |
+| `Button` | Primary and secondary actions such as Build, Deploy, Back, Copy, Save Settings, Connect Wallet | `variant`, `size`, `disabled`, `onClick`, `type`; default `size` is `content` |
+| `Input` | RPC endpoint, Lyquid ID, short constructor values | `value`, `onChange`, `placeholder`, `disabled`, `aria-invalid`; wrapper should not force full width or fixed height |
+| `Textarea` | ABI JSON paste, readonly TOML previews, raw payload display when editable | `value`, `onChange`, `placeholder`, `readOnly`, `rows`; wrapper should not force full width or fixed min-height |
 | `Label` | Field label tied to form controls | `htmlFor` |
-| `Select` | Build Method and Deploy Method dropdowns | `value`, `onValueChange`, `disabled` |
+| `Select` | Build Method and Deploy Method dropdowns | `value`, `onValueChange`, `disabled`; `SelectTrigger` wrapper should not force full width or fixed height |
 | `Dialog` | Settings dialog and non-destructive modal forms | `open`, `onOpenChange` |
-| `AlertDialog` | Update confirmation before deploying with an existing Lyquid ID | `open`, `onOpenChange` |
+| `AlertDialog` | Destructive or high-confirmation decisions | `open`, `onOpenChange` |
 | `Card` | Repeated result blocks only, not page sections nested inside cards | `className` |
 | `Progress` | Build or deploy progress indicators | `value` |
-| `Badge` | Compact status, transport, or method tags | `variant` |
+| `Badge` | Compact status, transport, method, or file tags | `variant` |
 | `Separator` | Dividing settings or review sections | `orientation` |
 | `Tooltip` | Icon-only buttons and compact technical hints | `delayDuration`, trigger content |
-| `Toast` / `Sonner` | Non-blocking success/error messages | message, description, action |
+| `Toast` / `Sonner` | Non-blocking success/error messages when installed | message, description, action |
 
-Do not wrap shadcn components just to rename them. Wrap only when Cloud Deploy needs a reusable business behavior.
+Do not wrap shadcn components just to rename them. Wrap only when the project needs reusable business behavior.
 
 ## Registry Lookup
 
-Reusable capability registries live in `docs/agent/registries.md`. They are locator and ownership maps, not complete API documentation. Source files and exported TypeScript types are the implementation truth.
+Reusable capability registries live in `docs/agent/registries.md`. Registries are locator and ownership maps, not complete API documentation. Source files and exported TypeScript types are the implementation truth.
 
-Do not open `docs/agent/registries.md` for every task. Open it when the task involves creating, reusing, moving, renaming, changing, or deleting:
+Do not open the registry file for every task. Open it when the task involves creating, reusing, moving, renaming, changing, or deleting:
 
 - shared components
 - utilities
+- stores
 - config modules
 - reusable constants or defaults
 
@@ -255,105 +340,7 @@ Before creating reusable code, use the relevant registry:
 
 - UI behavior: check Shared Component Registry.
 - Reusable logic: check Utility Registry.
+- Shared client state: check Store Registry.
 - Constants/defaults/static options: check Config Registry.
 
 If a matching registry entry points to existing source, read its `Path` before using it. Do not rely only on registry summaries.
-
-Creating, moving, renaming, changing public API, or deleting shared components, utilities, or config modules requires updating `docs/agent/registries.md` in the same change.
-
-## Source Entrypoints
-
-Registries help agents find source, but source exports own the usable API.
-
-- Active shared components should be exported from `src/components/shared/index.ts`.
-- Shared component files own their actual props types.
-- Utility modules own their actual exported functions and types.
-- ABI utilities may grow into multiple files under `src/utils/abi`, but the registered ABI utility path remains the first place to look unless the registry is updated.
-- Config modules own their actual exported constants and option objects.
-- Deprecation should be visible at the source export or source module when practical, not only in `docs/agent/registries.md`.
-
-If a registry summary and source disagree, follow source and update the registry summary in the same change.
-
-## Import Boundaries
-
-Keep dependencies flowing from app surfaces toward shared logic, not the other way around.
-
-- `src/config` must not import React, shadcn/ui, Zustand stores, or runtime browser APIs.
-- `src/config` may import types only when needed.
-- `src/utils` must not import React components, shadcn/ui, or Zustand stores.
-- `src/utils` may import `src/config` when pure logic needs shared constants.
-- Browser-only utilities must make that clear in their file name or registry notes.
-- `src/store` may import `src/config`, `src/utils`, and types.
-- `src/store` must not import UI components.
-- `src/components/shared` may import shadcn/ui, utilities, config, and types.
-- `src/components/shared` should receive store-backed values and callbacks through props by default.
-- `src/components/shared` may import store hooks only when the registry entry explicitly documents that the component owns app-level binding. Do not add store imports to shared components casually.
-- Page components compose layout, shared components, stores, and utilities, but should not own reusable domain logic.
-
-## State Rules
-
-Use Zustand stores for shared app state.
-
-Persist only settings:
-
-- `rpcEndpoint`
-- `lyquidId`
-- `abi`
-- `buildMethod`
-- `deployMethod`
-
-Use `src/store/settings-store.ts` for persisted settings.
-
-`settings-store` owns atomic updates and reconciliation for persisted settings. In particular, `abi`, `buildMethod`, and `deployMethod` are related values. When ABI changes, the store should expose derived validity or update state consistently so Settings, Build, and Deploy do not each invent separate method-existence checks.
-
-Do not persist runtime deployment data by default:
-
-- uploaded project files
-- constructor parameter values
-- build result
-- prepared payload
-- deploy result
-- logs
-
-Use `src/store/deploy-session-store.ts` for runtime deployment session state.
-
-Runtime data may be held in memory while the page is open. If the page refreshes, the user can repeat the flow.
-
-## Request Rules
-
-Implement two dispatch paths:
-
-- on-chain sender
-- off-chain sender
-
-The selected ABI method determines the request shape and transport. Do not hard-code method names such as `build`, `prepare`, `deploy`, `publish`, or `register`.
-
-If the ABI changes and the selected Build Method or Deploy Method no longer exists, show the configured existence error and do not add additional compatibility checks.
-
-If the user selects the wrong method, still send it according to the ABI and selected workflow. Surface the returned error.
-
-## UI Rules
-
-- Keep the app as a `100vh` tool surface.
-- Use a progress-step workflow: Upload, Build, Review, Deploy.
-- Keep Settings in a dialog, not in the main step content.
-- Put `Connect Wallet` and `Settings` in the top-right app header.
-- Support back navigation between steps.
-- Avoid long landing-page or marketing sections.
-- Avoid nested cards.
-- Keep text inside controls short enough to fit at mobile and desktop sizes.
-
-## Before Finishing Checklist
-
-Before finishing a frontend change, check:
-
-- No arbitrary Tailwind values in app markup, such as `text-[11px]` or `text-[#fff]`.
-- No raw interactive/form controls in app code when shadcn/ui or shared components fit.
-- Raw ABI parsing is handled by the registered ABI utility instead of page or component code.
-- Persisted Zustand state contains only approved settings.
-- Runtime deployment data is not stored in `zustand.persist`.
-- Shared Component Registry is updated if shared components were added, moved, renamed, changed, or deleted.
-- Utility Registry is updated if utilities were added, moved, renamed, changed, or deleted.
-- Config Registry is updated if config modules were added, moved, renamed, changed, or deleted.
-- Files over 250 lines are explained in the implementation summary.
-- Files over 300 lines are split or explicitly justified.

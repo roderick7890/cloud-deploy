@@ -1,18 +1,25 @@
 # Agent Guide
 
-This file is the lightweight entry point for agents working on Cloud Deploy. Keep it short. Load detailed guidance only when the task needs it.
+This file is the lightweight entry point for agents working on Cloud Deploy. Keep project-specific facts in `docs/agent/project.md` and reusable capability locations in `docs/agent/registries.md`.
 
 ## Required Receipts
 
-- If a task follows frontend rules, read `docs/agent/frontend.md` and mention `Followed docs/agent/frontend.md frontend rules.` in the final response.
+- If a task follows React frontend rules, read `docs/agent/frontend.md` and mention `Followed docs/agent/frontend.md frontend rules.` in the final response.
 - If a task reads or updates reusable capability registries, read `docs/agent/registries.md` and mention `Followed docs/agent/registries.md registries.` in the final response.
+- If a task depends on Cloud Deploy product behavior, routing, stack choices, request paths, wallet behavior, or persistence rules, read `docs/agent/project.md` and mention `Followed docs/agent/project.md project rules.` in the final response.
 
 ## When To Read Extra Docs
+
+Read `docs/agent/project.md` before:
+
+- changing product behavior, deployment flow, routes, layout, stores, wallet logic, request dispatch, or persistence
+- changing framework, build, router, Tailwind, shadcn/ui, wagmi, viem, or Zustand assumptions
+- deciding where a new project-specific file belongs
 
 Read `docs/agent/frontend.md` before:
 
 - adding or changing frontend code
-- scaffolding project structure
+- scaffolding frontend project structure
 - changing routes, layout, stores, request dispatch, wallet logic, Tailwind, shadcn/ui, or component composition
 
 Read `docs/agent/registries.md` before:
@@ -20,49 +27,45 @@ Read `docs/agent/registries.md` before:
 - creating or reusing shared components
 - creating or reusing utility helpers
 - adding constants, defaults, route config, storage keys, upload config, or other static config
-- moving, renaming, changing public API, or deleting shared components, utilities, or config modules
+- moving, renaming, changing public API, or deleting shared components, utilities, stores, or config modules
 
-Do not open `docs/agent/registries.md` for every task. Use it only when reusable shared/components/utils/config are involved.
+Do not open `docs/agent/registries.md` for every task. Use it only when reusable shared components, utilities, stores, or config are involved.
 
-## Core Project Rules
+## Core Rules
 
-- Frontend stack: Tailwind CSS, shadcn/ui, Zustand + `zustand.persist`, wagmi, and viem.
-- Routing: use Next.js Pages Router conventions under `src/pages`; do not use App Router unless explicitly approved.
-- Source layout: `src/assets/images`, `src/config`, `src/layout`, `src/pages`, `src/components`, `src/components/shared`, `src/utils`, `src/store`.
+- Prefer the project's existing framework, router, styling system, component library, state model, wallet integration, and request libraries.
+- Do not introduce a new framework, router, UI library, state library, wallet library, chain library, or request library unless the project owner explicitly approves it.
+- Use route-file naming conventions compatible with pages-style routing when route files live under `src/pages`. This means names like `index.tsx`, `legacy.tsx`, and `[id].tsx`; it does not require using Next.js.
+- Source layout should converge on `src/assets/images`, `src/config`, `src/layout`, `src/pages`, `src/components`, `src/components/shared`, `src/components/ui`, `src/utils`, `src/store`, and `src/types` unless `docs/agent/project.md` says otherwise.
 - Do not create `src/constants`; constants belong in `src/config`.
-- File names and folders use lowercase kebab-case. Variables/functions/hooks use camelCase. React components use PascalCase.
+- File names and folders use lowercase kebab-case. Variables, functions, hooks, and object fields use camelCase. React components use PascalCase.
 - Target about 200 lines per source file. Explain files over 250 lines. Normally split files over 300 lines.
 
 ## Reuse Policy
 
-- Existing shared components, utilities, and config modules should be reused before new ones are created.
+- Existing shared components, utilities, stores, and config modules should be reused before new ones are created.
 - `docs/agent/registries.md` is a locator and ownership map, not API truth.
 - Source exports and TypeScript types are the API truth.
-- If registry summaries and source disagree, follow source and update the registry in the same change.
+- If registry summaries and source disagree, follow source and update the registry in the same change unless the user explicitly asked for read-only work.
 
-## UI Policy
+## Frontend Policy
 
-- Prefer shared components when they encode Cloud Deploy business behavior.
-- Prefer shadcn/ui primitives for generic controls.
-- Do not write raw interactive/form controls such as `<button />`, `<input />`, `<textarea />`, `<select />`, `<label />`, or `<dialog />` when shadcn/ui or shared components fit.
-- Raw layout/semantic elements such as `<div />`, `<main />`, `<section />`, `<header />`, `<nav />`, `<footer />`, and `<form />` are allowed.
-- Do not use arbitrary Tailwind values in app markup, such as `text-[11px]`, `text-[#fff]`, or `bg-[#121212]`; create semantic tokens first.
-- Keep the app as a `100vh` deploy tool with progress steps: Upload, Build, Review, Deploy.
+- React frontend implementation rules live in `docs/agent/frontend.md`.
+- Cloud Deploy-specific frontend facts live in `docs/agent/project.md`.
+- Installed reusable capabilities and source locations live in `docs/agent/registries.md`.
 
 ## State And Request Policy
 
-- Persist only settings: `rpcEndpoint`, `lyquidId`, `abi`, `buildMethod`, `deployMethod`.
-- Use `src/store/settings-store.ts` for persisted settings.
-- Use `src/store/deploy-session-store.ts` for runtime deployment session state.
-- Do not persist uploaded files, constructor values, build results, prepared payloads, deploy results, or logs.
-- `settings-store` owns atomic reconciliation of `abi`, `buildMethod`, and `deployMethod`.
-- Implement two request paths: on-chain sender and off-chain sender.
-- Do not hard-code ABI method names such as `build`, `prepare`, `deploy`, `publish`, or `register`.
+- Persist only durable user settings and preferences unless `docs/agent/project.md` explicitly allows an exception.
+- Do not persist uploaded files, constructor values, build results, prepared payloads, deploy results, logs, current tabs, or other runtime workflow data unless the project guide explicitly allows it.
+- Keep request and wallet behavior aligned with the project guide and existing request utilities.
+- Do not hard-code domain method names in reusable request utilities. Prefer config, ABI/source metadata, or caller-provided method names.
 
 ## Import Boundaries
 
 - `src/config` must not import React, shadcn/ui, Zustand stores, or runtime browser APIs.
 - `src/utils` must not import React components, shadcn/ui, or Zustand stores.
 - `src/store` must not import UI components.
+- `src/types` must not import runtime implementation modules.
 - `src/components/shared` should receive store-backed values and callbacks through props by default.
 - Page components compose layout, shared components, stores, and utilities, but should not own reusable domain logic.

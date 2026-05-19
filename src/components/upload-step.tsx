@@ -1,4 +1,4 @@
-import { useState, type InputHTMLAttributes } from "react";
+import { useState, type InputHTMLAttributes, type ReactNode } from "react";
 import type { ProjectTomlFile, UploadedProject } from "@/types/deploy";
 import { ProjectTree } from "@/components/project-tree";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,8 @@ import { analyzeProjectFiles } from "@/utils/file-utils";
 type UploadStepProps = {
   project: UploadedProject | null;
   onUpload: (project: UploadedProject) => void;
-  onContinue: () => void;
+  onContinue?: () => void;
+  actions?: ReactNode;
 };
 
 const directoryInputProps = {
@@ -27,7 +28,7 @@ function findFile(files: File[], path: string | null) {
   return files.find((file) => ((file as File & { webkitRelativePath?: string }).webkitRelativePath || file.name) === path);
 }
 
-export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
+export function UploadStep({ project, onUpload, onContinue, actions }: UploadStepProps) {
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [sourceOnly, setSourceOnly] = useState(false);
   const activePreviewPath = previewPath ?? project?.selectedTomlPath ?? null;
@@ -42,7 +43,7 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
   };
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex w-full flex-col gap-6">
       <div className="space-y-2">
         <Label htmlFor="project-folder">Project folder</Label>
         <p className="text-sm text-muted-foreground">
@@ -52,6 +53,7 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
           id="project-folder"
           type="file"
           multiple
+          className="w-full"
           {...directoryInputProps}
           onChange={async (event) => {
             const files = Array.from(event.target.files ?? []);
@@ -66,8 +68,8 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
       </div>
 
       {project ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-md border bg-card p-4">
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <div className="flex flex-1 flex-col rounded-md border bg-card p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium">{project.rootName}</p>
@@ -80,7 +82,7 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
             <p className="mt-1 text-sm text-muted-foreground">
               {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes
             </p>
-            <div className="mt-4 h-80 overflow-auto rounded-md border p-2">
+            <div className="mt-4 max-h-80 overflow-auto rounded-md border p-2">
               <ProjectTree
                 key={`${project.rootName}:${project.metadata.fileCount}:${project.metadata.totalSize}:${sourceOnly}`}
                 nodes={project.tree}
@@ -91,14 +93,14 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
             </div>
           </div>
 
-          <div className="rounded-md border bg-card p-4">
+          <div className="flex flex-1 flex-col rounded-md border bg-card p-4">
             {selectedToml ? (
               <div className="space-y-3">
                 <div>
                   <p className="font-medium">{selectedToml.path}</p>
                   <p className="text-sm text-muted-foreground">Readonly TOML preview. This file will be used as the build target.</p>
                 </div>
-                <Textarea value={selectedToml.content} readOnly className="min-h-80 font-mono" />
+                <Textarea value={selectedToml.content} readOnly rows={14} className="font-mono w-full" />
               </div>
             ) : selectedFile ? (
               <div className="space-y-2">
@@ -117,11 +119,13 @@ export function UploadStep({ project, onUpload, onContinue }: UploadStepProps) {
         </div>
       ) : null}
 
-      <div className="flex justify-end">
-        <Button type="button" disabled={!project?.selectedTomlPath} onClick={onContinue}>
-          Continue
-        </Button>
-      </div>
+      {actions ?? (
+        <div className="flex justify-end">
+          <Button type="button" disabled={!project?.selectedTomlPath} onClick={onContinue}>
+            Continue
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

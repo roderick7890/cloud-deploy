@@ -19,6 +19,7 @@ export function ConstructorParamsForm({ constructorFields, values, onValuesChang
         <div key={field.name} className="space-y-2">
           <Label htmlFor={`constructor-${field.name}`}>{field.name}</Label>
           <Input
+            className="w-full"
             id={`constructor-${field.name}`}
             value={values[field.name] ?? ""}
             placeholder={field.type}

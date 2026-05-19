@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import type { DeployResult } from "@/types/deploy";
 import { ResultSummary } from "@/components/shared/result-summary";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -8,6 +9,7 @@ type DeployStepProps = {
   isWalletConnected: boolean;
   isDeploying?: boolean;
   result: DeployResult | null;
+  onBack?: () => void;
   onDeploy: () => void;
   onConnectWallet: () => void;
   error: string | null;
@@ -17,6 +19,7 @@ export function DeployStep({
   isWalletConnected,
   isDeploying = false,
   result,
+  onBack,
   onDeploy,
   onConnectWallet,
   error
@@ -36,7 +39,13 @@ export function DeployStep({
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       {error ? <p className="rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{error}</p> : null}
       <ResultSummary result={result} />
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-between gap-2">
+        {onBack ? (
+          <Button type="button" variant="ghost" onClick={onBack}>
+            <ArrowLeft className="size-4" />
+            Back
+          </Button>
+        ) : <span />}
         <Button type="button" disabled={isDeploying} onClick={handleDeployClick}>
           {isDeploying ? "Deploying..." : "Deploy"}
         </Button>

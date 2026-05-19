@@ -46,6 +46,7 @@ export type BuildResult = {
   hashes: DeploymentHashes;
   logs: string[];
   payload?: unknown;
+  contractAbi?: unknown;
   raw: unknown;
 };
 
@@ -59,5 +60,7 @@ export type DeployResult = {
   lyquidId?: string;
   status?: string;
   signedPayloadHash?: string;
+  contractAbi?: unknown;
+  transactionRaw?: unknown;
   raw: unknown;
 };

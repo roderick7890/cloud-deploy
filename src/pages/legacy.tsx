@@ -1,23 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
-import { BuildStep } from "@/components/build-step";
-import { DeployStep } from "@/components/deploy-step";
 import { ReviewStep } from "@/components/review-step";
 import { SettingsDialog } from "@/components/shared/settings-dialog";
+import { Button } from "@/components/ui/button";
 import { UploadStep } from "@/components/upload-step";
 import { AppShell } from "@/layout/app-shell";
 import { useDeploySessionStore } from "@/store/deploy-session-store";
 import { useSettingsStore } from "@/store/settings-store";
-import type { DeployStepId } from "@/types/deploy";
+import type { BuildResult } from "@/types/deploy";
 import { findMethod } from "@/utils/abi/abi-utils";
 import { prepareBuildMethodCall } from "@/utils/build-args-utils";
-import { prepareDeployMethodCall } from "@/utils/deploy-args-utils";
+import { prepareDeployMethodCall, getDeployAbiFromBuildPayload } from "@/utils/deploy-args-utils";
 import { downloadJson } from "@/utils/download-utils";
 import { hashPayload } from "@/utils/hash-utils";
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
 import { dispatchSelectedMethod } from "@/utils/request/request-dispatcher";
-import { fetchRpcTransaction } from "@/utils/request/rpc-transaction-client";
+import { fetchRpcTransactionResponse } from "@/utils/request/rpc-transaction-client";
 
 type BrowserWindowWithWallet = Window & {
   ethereum?: Parameters<typeof createBrowserWalletTransactionClient>[0];
@@ -27,22 +26,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function getResultTransactionHash(raw: unknown, fallback?: string) {
-  return fallback ?? (isRecord(raw) && typeof raw.transactionHash === "string" ? raw.transactionHash : undefined);
+function getTransactionHash(raw: unknown) {
+  return isRecord(raw) && typeof raw.transactionHash === "string" ? raw.transactionHash : undefined;
 }
 
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Failed to fetch RPC transaction.";
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
-const completedByStep: Record<DeployStepId, DeployStepId[]> = {
-  upload: [],
-  build: ["upload"],
-  review: ["upload", "build"],
-  deploy: ["upload", "build", "review"]
-};
-
-export default function HomePage() {
+export default function LegacyPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
@@ -51,148 +43,114 @@ export default function HomePage() {
   const { disconnect } = useDisconnect();
   const settings = useSettingsStore();
   const session = useDeploySessionStore();
-  const deployRaw = session.deployResult?.raw;
-  const deployTransactionHash = getResultTransactionHash(deployRaw, session.deployResult?.transactionHash);
-  const deployTransactionFound = Boolean(isRecord(deployRaw) && isRecord(deployRaw.transaction));
 
   const walletLabel = account.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "Connect Wallet";
-  const canBuild = Boolean(session.uploadedProject && settings.parsedAbi && settings.buildMethod && !settings.methodErrors.buildMethod);
+  const hasSelectedToml = Boolean(session.uploadedProject?.selectedTomlPath);
+  const canRunAction = hasSelectedToml && !isBuilding && !isDeploying;
   const connectWallet = () => connect({ connector: injected() });
   const copyWalletAddress = () => (account.address ? navigator.clipboard.writeText(account.address) : undefined);
 
-  useEffect(() => {
-    if (session.currentStep !== "deploy" || !settings.rpcEndpoint || !deployTransactionHash?.startsWith("0x") || deployTransactionFound) {
-      return undefined;
-    }
-
-    let cancelled = false;
-
-    const mergeDeployRaw = (rawPatch: Record<string, unknown>) => {
-      const latestResult = useDeploySessionStore.getState().deployResult;
-
-      if (!latestResult || getResultTransactionHash(latestResult.raw, latestResult.transactionHash) !== deployTransactionHash) {
-        return;
-      }
-
-      const latestRaw = isRecord(latestResult.raw) ? latestResult.raw : {};
-      useDeploySessionStore.getState().setDeployResult({
-        ...latestResult,
-        raw: { ...latestRaw, ...rawPatch }
-      });
-    };
-
-    const lookupTransaction = async () => {
-      const latestRaw = useDeploySessionStore.getState().deployResult?.raw;
-
-      if (isRecord(latestRaw) && isRecord(latestRaw.transaction)) {
-        return;
-      }
-
-      try {
-        const transaction = await fetchRpcTransaction({
-          rpcEndpoint: settings.rpcEndpoint,
-          transactionHash: deployTransactionHash as `0x${string}`,
-          offChainFetch: (input, init) => fetch(input, init)
-        });
-
-        if (cancelled) {
-          return;
-        }
-
-        if (transaction) {
-          mergeDeployRaw({ transaction, transactionLookupPending: false, transactionLookupError: undefined });
-          return;
-        }
-
-        mergeDeployRaw({ transactionLookupPending: true });
-      } catch (error) {
-        if (!cancelled) {
-          mergeDeployRaw({ transactionLookupPending: true, transactionLookupError: getErrorMessage(error) });
-        }
-      }
-    };
-
-    void lookupTransaction();
-    const intervalId = window.setInterval(() => void lookupTransaction(), 2000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [deployTransactionFound, deployTransactionHash, session.currentStep, settings.rpcEndpoint]);
-
-  const handleBuild = async () => {
+  const runBuild = async (): Promise<BuildResult | null> => {
     if (!settings.parsedAbi || !session.uploadedProject) {
       session.setCurrentError("Upload and valid ABI settings are required.");
-      return;
+      return null;
     }
 
+    const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
+    if (!buildMethod) {
+      session.setCurrentError("Selected build method does not exist.");
+      return null;
+    }
+
+    const { args, sourceHash } = await prepareBuildMethodCall({
+      method: buildMethod,
+      project: session.uploadedProject
+    });
+    const raw = await dispatchSelectedMethod({
+      parsedAbi: settings.parsedAbi,
+      selectedMethod: settings.buildMethod,
+      args,
+      context: {
+        rpcEndpoint: settings.rpcEndpoint,
+        lyquidId: settings.lyquidId,
+        accountAddress: account.address,
+        offChainFetch: (input, init) => fetch(input, init)
+      }
+    });
+    const artifactHash = await hashPayload(raw);
+    const reviewPayload = {
+      hashes: { sourceHash, artifactHash },
+      payload: raw
+    };
+    const buildResult: BuildResult = {
+      hashes: reviewPayload.hashes,
+      logs: [],
+      payload: raw,
+      raw,
+      contractAbi: getDeployAbiFromBuildPayload(buildMethod, reviewPayload)
+    };
+
+    session.setBuildResult(buildResult);
+    return buildResult;
+  };
+
+  const handleBuild = async () => {
     try {
+      session.goToStep("review");
       setIsBuilding(true);
       session.setCurrentError(null);
-      const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
-      if (!buildMethod) {
-        session.setCurrentError("Selected build method does not exist.");
-        return;
-      }
-
-      const { args, sourceHash } = await prepareBuildMethodCall({
-        method: buildMethod,
-        project: session.uploadedProject
-      });
-      const raw = await dispatchSelectedMethod({
-        parsedAbi: settings.parsedAbi,
-        selectedMethod: settings.buildMethod,
-        args,
-        context: {
-          rpcEndpoint: settings.rpcEndpoint,
-          lyquidId: settings.lyquidId,
-          accountAddress: account.address,
-          offChainFetch: (input, init) => fetch(input, init)
-        }
-      });
-      const artifactHash = await hashPayload(raw);
-
-      session.setBuildResult({
-        hashes: { sourceHash, artifactHash },
-        logs: [],
-        payload: raw,
-        raw
-      });
+      await runBuild();
     } catch (error) {
-      session.setCurrentError(error instanceof Error ? error.message : "Build failed.");
+      session.setCurrentError(getErrorMessage(error, "Build failed."));
     } finally {
       setIsBuilding(false);
     }
   };
 
   const handleDeploy = async () => {
+    session.goToStep("review");
+
     if (!account.address) {
-      session.setCurrentError("Connect wallet before deploying.");
+      session.setCurrentError(null);
       return;
     }
 
-    if (!settings.parsedAbi || !session.reviewPayload) {
-      session.setCurrentError("Review payload is required before deploy.");
+    if (!settings.parsedAbi || !session.uploadedProject) {
+      session.setCurrentError("Upload and valid ABI settings are required.");
       return;
     }
 
     try {
-      setIsDeploying(true);
       session.setCurrentError(null);
+      let buildResult = session.buildResult;
+
+      if (!buildResult) {
+        setIsBuilding(true);
+        try {
+          buildResult = await runBuild();
+        } finally {
+          setIsBuilding(false);
+        }
+      }
+
+      setIsDeploying(true);
       const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
       const deployMethod = findMethod(settings.parsedAbi, settings.deployMethod);
 
-      if (!buildMethod || !deployMethod) {
-        session.setCurrentError("Selected deploy method does not exist.");
+      if (!buildResult || !buildMethod || !deployMethod) {
+        session.setCurrentError("Selected build or deploy method does not exist.");
         return;
       }
 
-      const { args } = prepareDeployMethodCall({
+      const reviewPayload = {
+        hashes: buildResult.hashes,
+        payload: buildResult.payload ?? buildResult.raw
+      };
+      const { args, deployAbi } = prepareDeployMethodCall({
         buildMethod,
         deployMethod,
         project: session.uploadedProject,
-        reviewPayload: session.reviewPayload
+        reviewPayload
       });
       const raw = await dispatchSelectedMethod({
         parsedAbi: settings.parsedAbi,
@@ -206,73 +164,88 @@ export default function HomePage() {
           offChainFetch: (input, init) => fetch(input, init)
         }
       });
+      const transactionHash = getTransactionHash(raw);
+      let transactionRaw: unknown;
+
+      if (transactionHash) {
+        try {
+          transactionRaw = await fetchRpcTransactionResponse({
+            rpcEndpoint: settings.rpcEndpoint,
+            transactionHash: transactionHash as `0x${string}`,
+            offChainFetch: (input, init) => fetch(input, init)
+          });
+        } catch (error) {
+          transactionRaw = {
+            transactionHash,
+            transactionLookupError: getErrorMessage(error, "Failed to fetch RPC transaction."),
+            deployRaw: raw
+          };
+        }
+      }
+
       const signedPayloadHash = await hashPayload(raw);
-      const transactionHash = typeof raw === "object" && raw && "transactionHash" in raw ? String(raw.transactionHash) : undefined;
-      const status = typeof raw === "object" && raw && "status" in raw ? String(raw.status) : "submitted";
+
       session.setDeployResult({
         transactionHash,
-        status,
+        status: isRecord(raw) && typeof raw.status === "string" ? raw.status : "submitted",
         signedPayloadHash,
-        raw
+        raw,
+        transactionRaw: transactionRaw ?? raw,
+        contractAbi: deployAbi ?? buildResult.contractAbi
       });
     } catch (error) {
-      session.setCurrentError(error instanceof Error ? error.message : "Deploy failed.");
+      session.setCurrentError(getErrorMessage(error, "Deploy failed."));
     } finally {
       setIsDeploying(false);
     }
   };
 
-  let stepContent = (
-    <DeployStep
-      isWalletConnected={Boolean(account.address)}
-      isDeploying={isDeploying}
-      result={session.deployResult}
-      onDeploy={handleDeploy}
-      onConnectWallet={connectWallet}
-      error={session.currentError}
-    />
+  const contractAbi = session.deployResult?.contractAbi ?? session.buildResult?.contractAbi;
+  const uploadActions = (
+    <div className="flex flex-wrap justify-end gap-2">
+      <Button type="button" variant="outline" disabled={!canRunAction} onClick={handleBuild}>
+        {isBuilding ? "Building..." : "Build"}
+      </Button>
+      <Button type="button" disabled={!canRunAction} onClick={handleDeploy}>
+        {isDeploying ? "Deploying..." : "Deploy"}
+      </Button>
+    </div>
   );
-
-  if (session.currentStep === "upload") {
-    stepContent = <UploadStep project={session.uploadedProject} onUpload={session.setUploadedProject} onContinue={() => session.goToStep("build")} />;
-  }
-
-  if (session.currentStep === "build") {
-    stepContent = (
-      <BuildStep
-        onBuild={handleBuild}
-        canBuild={canBuild}
-        isBuilding={isBuilding}
-        error={session.currentError}
-      />
-    );
-  }
-
-  if (session.currentStep === "review") {
-    stepContent = (
-      <ReviewStep
-        reviewPayload={session.reviewPayload}
-        onCopy={() => navigator.clipboard.writeText(JSON.stringify(session.reviewPayload?.payload ?? {}, null, 2))}
-        onDownload={() => downloadJson("cloud-deploy-payload.json", session.reviewPayload?.payload ?? {})}
-        onContinue={() => session.goToStep("deploy")}
-      />
-    );
-  }
 
   return (
     <>
       <AppShell
-        currentStep={session.currentStep}
-        completedSteps={completedByStep[session.currentStep]}
         walletLabel={walletLabel}
         walletAddress={account.address}
         onConnectWallet={connectWallet}
         onCopyWalletAddress={copyWalletAddress}
         onDisconnectWallet={disconnect}
         onOpenSettings={() => setSettingsOpen(true)}
-        onStepBack={session.goToStep}
+        showProgress={false}
       >
-        {stepContent}
+        {session.currentStep === "review" ? (
+          <ReviewStep
+            buildResult={session.buildResult}
+            deployResult={session.deployResult}
+            contractAbi={contractAbi}
+            isBuilding={isBuilding}
+            isDeploying={isDeploying}
+            isWalletConnected={Boolean(account.address)}
+            currentError={session.currentError}
+            onBack={() => session.goToStep("upload")}
+            onBuild={handleBuild}
+            onDeploy={handleDeploy}
+            onConnectWallet={connectWallet}
+            onCopyBuild={() => navigator.clipboard.writeText(JSON.stringify(session.buildResult?.payload ?? session.buildResult?.raw ?? {}, null, 2))}
+            onDownloadBuild={() => downloadJson("cloud-deploy-build-result.json", session.buildResult?.payload ?? session.buildResult?.raw ?? {})}
+            onCopyAbi={() => navigator.clipboard.writeText(JSON.stringify(contractAbi ?? {}, null, 2))}
+          />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto p-6">
+            {session.currentError ? <p className="mb-4 rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{session.currentError}</p> : null}
+            <UploadStep project={session.uploadedProject} onUpload={session.setUploadedProject} actions={uploadActions} />
+          </div>
+        )}
       </AppShell>
       <SettingsDialog
         open={settingsOpen}

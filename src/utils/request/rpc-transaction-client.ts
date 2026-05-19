@@ -40,7 +40,7 @@ function getRpcErrorMessage(raw: unknown) {
   return "Failed to fetch RPC transaction.";
 }
 
-export async function fetchRpcTransaction({ rpcEndpoint, transactionHash, offChainFetch }: FetchRpcTransactionInput) {
+export async function fetchRpcTransactionResponse({ rpcEndpoint, transactionHash, offChainFetch }: FetchRpcTransactionInput) {
   if (!rpcEndpoint) {
     throw new Error("RPC endpoint is required.");
   }
@@ -72,6 +72,12 @@ export async function fetchRpcTransaction({ rpcEndpoint, transactionHash, offCha
   if (!response.ok || responseErrorMessage) {
     throw new Error(responseErrorMessage ?? "Failed to fetch RPC transaction.");
   }
+
+  return raw;
+}
+
+export async function fetchRpcTransaction(input: FetchRpcTransactionInput) {
+  const raw = await fetchRpcTransactionResponse(input);
 
   if (!raw || typeof raw !== "object" || !("result" in raw)) {
     throw new Error("RPC transaction response is missing a result.");

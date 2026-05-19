@@ -74,6 +74,31 @@ describe("shared components", () => {
     expect(await screen.findByText("compileProject(bytes)")).toBeInTheDocument();
   });
 
+  it("stretches settings form controls to the dialog content width", () => {
+    renderWithProviders(
+      <SettingsDialog
+        open
+        onOpenChange={vi.fn()}
+        settings={{ rpcEndpoint: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
+        methodOptions={[]}
+        methodErrors={{}}
+        onSave={vi.fn()}
+      />
+    );
+
+    expect(screen.getByLabelText("RPC Endpoint")).toHaveClass("w-full");
+    expect(screen.getByLabelText("Lyquid ID")).toHaveClass("w-full");
+    expect(screen.getByLabelText("ABI")).toHaveClass("w-full");
+    expect(screen.getByRole("combobox", { name: "Build Method" })).toHaveClass("w-full");
+    expect(screen.getByRole("combobox", { name: "Deploy Method" })).toHaveClass("w-full");
+  });
+
+  it("stretches constructor inputs to their form row width", () => {
+    renderWithProviders(<ConstructorParamsForm constructorFields={[{ name: "owner", type: "address" }]} values={{ owner: "" }} onValuesChange={vi.fn()} />);
+
+    expect(screen.getByLabelText("owner")).toHaveClass("w-full");
+  });
+
   it("renders constructor inputs and reports values", async () => {
     const user = userEvent.setup();
     const onValuesChange = vi.fn();

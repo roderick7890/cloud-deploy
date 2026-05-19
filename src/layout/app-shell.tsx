@@ -41,7 +41,7 @@ export function AppShell({
         onDisconnectWallet={onDisconnectWallet}
         onOpenSettings={onOpenSettings}
       />
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-w-5xl mx-auto">
         {showProgress && currentStep && completedSteps && onStepBack ? (
           <section className="border-b bg-card px-6 py-5">
             <ProgressSteps steps={deploySteps} currentStep={currentStep} completedSteps={completedSteps} onStepBack={onStepBack} />

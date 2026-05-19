@@ -125,3 +125,15 @@ export function prepareDeployMethodCall({ buildMethod, deployMethod, project, re
     deployAbi: parseAbiOutput(findAbiOutput(outputs))
   };
 }
+
+export function getDeployAbiFromBuildPayload(buildMethod: NormalizedAbiMethod, reviewPayload: ReviewPayload) {
+  const buildResultData = getBuildResultData(reviewPayload.payload);
+  const decoded = decodeFunctionResult({
+    abi: [buildMethod.abiItem],
+    functionName: buildMethod.name,
+    data: buildResultData
+  });
+  const outputs = normalizeDecodedOutputs(buildMethod.abiItem.outputs ?? [], decoded);
+
+  return parseAbiOutput(findAbiOutput(outputs));
+}

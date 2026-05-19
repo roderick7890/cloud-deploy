@@ -16,7 +16,7 @@ export function AbiMethodSelect({ id, label, methods, value, onValueChange, miss
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
       <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger id={id} aria-invalid={Boolean(missingMessage)}>
+        <SelectTrigger className="w-full" id={id} aria-invalid={Boolean(missingMessage)}>
           <SelectValue placeholder="Select ABI method" />
         </SelectTrigger>
         <SelectContent>

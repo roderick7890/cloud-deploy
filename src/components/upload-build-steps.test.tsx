@@ -155,4 +155,22 @@ describe("UploadStep and BuildStep", () => {
 
     expect(screen.getByRole("button", { name: "Building..." })).toBeDisabled();
   });
+
+  it("renders a back action on the build step", async () => {
+    const user = userEvent.setup();
+    const onBack = vi.fn();
+    renderWithProviders(
+      <BuildStep
+        onBuild={vi.fn()}
+        onBack={onBack}
+        canBuild
+        isBuilding={false}
+        error={null}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+
+    expect(onBack).toHaveBeenCalledOnce();
+  });
 });
