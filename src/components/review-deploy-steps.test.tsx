@@ -21,7 +21,7 @@ describe("ReviewStep and DeployStep", () => {
       />
     );
 
-    expect(screen.getByText("Build Result")).toBeInTheDocument();
+    expect(screen.getByText("Deployment Data")).toBeInTheDocument();
     expect(screen.getByText("Deploy Result")).toBeInTheDocument();
     expect(screen.getByText("Copy JSON")).toBeInTheDocument();
     expect(screen.getByText("Download JSON")).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("ReviewStep and DeployStep", () => {
       />
     );
 
-    expect(screen.getByText("Building...")).toBeInTheDocument();
+    expect(screen.getByText("Preparing...")).toBeInTheDocument();
     expect(screen.getByText("Deploying...")).toBeInTheDocument();
   });
 

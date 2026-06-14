@@ -16,12 +16,12 @@ vi.mock("@/pages/legacy", () => ({
 }));
 
 describe("App routing", () => {
-  it("matches the artifact workbench at the root path", () => {
+  it("matches the legacy UI at the root path", () => {
     window.history.pushState({}, "", "/");
 
     renderWithProviders(<App />);
 
-    expect(screen.getByText("Home route")).toBeInTheDocument();
+    expect(screen.getByText("Legacy route")).toBeInTheDocument();
   });
 
   it("matches legacy under the GitHub Pages base path", () => {

@@ -89,20 +89,20 @@ export function ReviewStep({
       {currentError ? <p className="rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{currentError}</p> : null}
       <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
         <div>
-          <h2 className="text-base font-semibold">Build Result</h2>
-          <p className="text-sm text-muted-foreground">Build evidence and raw payload for the selected TOML target.</p>
+          <h2 className="text-base font-semibold">Deployment Data</h2>
+          <p className="text-sm text-muted-foreground">Prepared contract creation data for the selected artifact.</p>
         </div>
         {isBuilding ? (
-          <LoadingState label="Building..." />
+          <LoadingState label="Preparing..." />
         ) : buildResult ? (
           <PayloadReviewPanel hashes={buildResult.hashes} payload={buildPayload} onCopy={onCopyBuild} onDownload={onDownloadBuild} />
         ) : (
           <EmptyState
-            title="Build has not started"
-            description="Run build to generate payload evidence for this TOML target."
+            title="Deployment data has not been prepared"
+            description="Deploy will prepare contract creation data from the selected artifact."
             action={onBuild ? (
               <Button type="button" variant="outline" disabled={isDeploying} onClick={onBuild}>
-                Build
+                Prepare
               </Button>
             ) : undefined}
           />
@@ -148,8 +148,8 @@ export function ReviewStep({
           />
         ) : (
           <EmptyState
-            title="Build result required"
-            description="Deploy will start after build has produced a payload."
+            title="Deployment data required"
+            description="Deploy will start after contract creation data is prepared."
           />
         )}
       </section>
