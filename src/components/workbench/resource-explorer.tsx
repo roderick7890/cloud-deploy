@@ -84,14 +84,14 @@ export function ResourceExplorer({ project, selectedArtifactPath, onProjectChang
                     <ArrowLeftRight className="size-4" />
                   </FolderInput>
                   <Button
-                    className={cn("w-fit h-fit p-1 !bg-transparent hover:text-accent", artifactOnly ? "text-accent" : "")}
+                    className={cn("h-7 w-fit gap-1 px-2 !bg-transparent text-xs hover:text-accent", artifactOnly ? "text-accent" : "")}
                     type="button"
                     variant="ghost"
-                    size="icon"
                     aria-label="Artifact JSON only"
                     onClick={() => setArtifactOnly((value) => !value)}
                   >
-                    <Filter className="size-2.5" />
+                    <Filter className="size-3" />
+                    Artifact JSON only
                   </Button>
                 </div>
               </div>

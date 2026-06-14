@@ -19,7 +19,7 @@ function getRoutePath(pathname: string) {
 }
 
 export function App() {
-  const Page = getRoutePath(window.location.pathname) === routes.workbench ? HomePage : LegacyPage;
+  const Page = getRoutePath(window.location.pathname) === routes.legacy ? LegacyPage : HomePage;
 
   return (
     <Web3Provider>

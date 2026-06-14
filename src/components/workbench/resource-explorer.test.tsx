@@ -111,6 +111,7 @@ describe("ResourceExplorer", () => {
     );
 
     expect(screen.getByText("README.md")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Artifact JSON only" })).toHaveTextContent("Artifact JSON only");
     await user.click(screen.getByRole("button", { name: "Artifact JSON only" }));
 
     expect(screen.queryByText("README.md")).not.toBeInTheDocument();
