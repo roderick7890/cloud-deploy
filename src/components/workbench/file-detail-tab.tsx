@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { ArtifactDescriptorFile } from "@/utils/lyquid-deployment-artifact";
 
@@ -34,6 +35,7 @@ function PreviewHeader({ title, actions, onBack }: { title: string; actions?: Re
 export function FileDetailTab({ path, files, artifactFiles, onBack, onDeploy }: FileDetailTabProps) {
   const artifactFile = artifactFiles.find((file) => file.path === path);
   const file = files.find((item) => getFilePath(item) === path);
+  const contractAbi = artifactFile?.artifact.contractAbi ? JSON.stringify(artifactFile.artifact.contractAbi, null, 2) : "";
 
   if (artifactFile) {
     return (
@@ -49,6 +51,12 @@ export function FileDetailTab({ path, files, artifactFiles, onBack, onDeploy }: 
           )}
         />
         <Textarea value={artifactFile.content} readOnly className="min-h-96 w-full font-mono border-none shadow-none" />
+        {contractAbi ? (
+          <div className="space-y-2">
+            <Label htmlFor="contract-abi">Contract ABI</Label>
+            <Textarea id="contract-abi" value={contractAbi} readOnly className="min-h-64 w-full font-mono" />
+          </div>
+        ) : null}
       </div>
     );
   }

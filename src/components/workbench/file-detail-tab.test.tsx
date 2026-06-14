@@ -17,7 +17,8 @@ const artifactContent = JSON.stringify({
   name: "demo",
   deploymentBytecode: "0x6001",
   imageHash: `0x${"1".repeat(64)}`,
-  repoHint: "registry.local/demo:latest"
+  repoHint: "registry.local/demo:latest",
+  contractAbi: [{ type: "function", name: "count", inputs: [], outputs: [{ type: "uint256" }] }]
 });
 const artifactFiles: ArtifactDescriptorFile[] = [
   {
@@ -43,6 +44,21 @@ describe("FileDetailTab", () => {
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
     expect(screen.getByText("demo/deploy.json")).toBeInTheDocument();
     expect(screen.getByDisplayValue(/deploymentBytecode/)).toHaveAttribute("readonly");
+  });
+
+  it("renders readonly contract ABI from the artifact when present", () => {
+    renderWithProviders(
+      <FileDetailTab
+        path="demo/deploy.json"
+        files={files}
+        artifactFiles={artifactFiles}
+        onDeploy={vi.fn()}
+      />
+    );
+
+    const abiPreview = screen.getByLabelText("Contract ABI");
+    expect((abiPreview as HTMLTextAreaElement).value).toContain('"name": "count"');
+    expect(abiPreview).toHaveAttribute("readonly");
   });
 
   it("calls back when leaving the preview", async () => {

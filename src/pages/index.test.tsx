@@ -80,13 +80,13 @@ describe("HomePage", () => {
     expect(screen.queryByText("Upload")).not.toBeInTheDocument();
   });
 
-  it("shows prepare and deploy actions after selecting an artifact descriptor", async () => {
+  it("shows deploy without a separate prepare action after selecting an artifact descriptor", async () => {
     const user = userEvent.setup();
     renderWithProviders(<HomePage />);
     await uploadArtifact(user);
 
     expect(await screen.findByLabelText("initialValue")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Prepare" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Prepare" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deploy" })).toBeInTheDocument();
   });
 
@@ -99,18 +99,6 @@ describe("HomePage", () => {
 
     expect(screen.getByRole("tab", { name: "deploy.json" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByDisplayValue(/deploymentBytecode/)).toHaveAttribute("readonly");
-  });
-
-  it("prepares contract creation calldata from the selected artifact", async () => {
-    const user = userEvent.setup();
-
-    renderWithProviders(<HomePage />);
-    await uploadArtifact(user);
-    await user.type(await screen.findByLabelText("initialValue"), "7");
-    await user.click(screen.getByRole("button", { name: "Prepare" }));
-
-    expect(await screen.findByText(/calldata/)).toBeInTheDocument();
-    expect(screen.getByText(/0x60016002/)).toBeInTheDocument();
   });
 
   it("deploys by sending a wallet-signed Lyquid create transaction", async () => {

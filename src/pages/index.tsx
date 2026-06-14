@@ -16,7 +16,7 @@ import { buildLyquidDeploymentTransaction, type UploadedArtifactBundle } from "@
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
 import { sendLyquidDeployment } from "@/utils/request/lyquid-deployment-sender";
 import { fetchRpcTransaction } from "@/utils/request/rpc-transaction-client";
-import { type BrowserWindowWithWallet, type BuildCacheEntry, createRunTitle, getErrorMessage, getTxHash } from "./workbench-page-utils";
+import { type BrowserWindowWithWallet, createRunTitle, getErrorMessage, getTxHash } from "./workbench-page-utils";
 import { WorkbenchSettingsDialog } from "./workbench-settings-dialog";
 
 export default function HomePage() {
@@ -26,8 +26,6 @@ export default function HomePage() {
   const [constructorValues, setConstructorValues] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<WorkbenchTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
-  const [buildCache, setBuildCache] = useState<BuildCacheEntry | null>(null);
-  const [isBuilding, setIsBuilding] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const account = useAccount();
   const { connect } = useConnect();
@@ -77,7 +75,6 @@ export default function HomePage() {
   const handleSelectTarget = (path: string) => {
     setSelectedArtifactPath(path);
     setConstructorValues({});
-    setBuildCache(null);
     openFileTab(path);
   };
 
@@ -91,56 +88,33 @@ export default function HomePage() {
     });
   };
 
-  const runBuild = async (options?: { silent?: boolean }) => {
+  const prepareDeploymentPayload = () => {
     if (!currentArtifact || !selectedArtifactPath) {
-      throw new Error("Upload a build artifact folder and select an artifact descriptor before preparing deploy data.");
+      throw new Error("Upload a build artifact folder and select an artifact descriptor before deploy.");
     }
 
     if (!bartenderAddress) {
-      throw new Error("Configure the network Bartender contract address in Settings before preparing deploy data.");
+      throw new Error("Configure the network Bartender contract address in Settings before deploy.");
     }
 
-    const now = Date.now();
-    const tabId = `build:${selectedArtifactPath}:${now}`;
-    const env = getEnv();
-    if (!options?.silent) {
-      upsertTab({ id: tabId, kind: "build-run", title: createRunTitle("build", selectedArtifactPath, now), createdAt: now, targetFile: selectedArtifactPath, status: "loading", env });
-    }
+    const transaction = buildLyquidDeploymentTransaction({
+      artifact: currentArtifact,
+      bartenderAddress,
+      constructorValues
+    });
+    const payload = {
+      artifact: {
+        name: currentArtifact.name,
+        imageHash: currentArtifact.imageHash,
+        repoHint: currentArtifact.repoHint,
+        abiStr: currentArtifact.abiStr,
+        osVersion: currentArtifact.osVersion
+      },
+      transaction: transaction.submittedTransaction,
+      parameters: transaction.parameters
+    };
 
-    try {
-      setIsBuilding(true);
-      const transaction = buildLyquidDeploymentTransaction({
-        artifact: currentArtifact,
-        bartenderAddress,
-        constructorValues
-      });
-      const raw = {
-        artifact: {
-          name: currentArtifact.name,
-          imageHash: currentArtifact.imageHash,
-          repoHint: currentArtifact.repoHint,
-          abiStr: currentArtifact.abiStr,
-          osVersion: currentArtifact.osVersion
-        },
-        transaction: transaction.submittedTransaction,
-        parameters: transaction.parameters
-      };
-      const reviewPayload = { hashes: { artifactHash: currentArtifact.imageHash }, payload: raw };
-      if (!options?.silent) {
-        setBuildCache({ targetFile: selectedArtifactPath, reviewPayload });
-      }
-      if (!options?.silent) {
-        patchTab(tabId, { status: "success", raw });
-      }
-      return reviewPayload;
-    } catch (error) {
-      if (!options?.silent) {
-        patchTab(tabId, { status: "error", error: getErrorMessage(error, "Prepare failed.") });
-      }
-      throw error;
-    } finally {
-      setIsBuilding(false);
-    }
+    return { hashes: { artifactHash: currentArtifact.imageHash }, payload };
   };
 
   const runDeploy = async () => {
@@ -163,7 +137,7 @@ export default function HomePage() {
         throw new Error("Configure the network Bartender contract address in Settings before deploy.");
       }
 
-      const reviewPayload = buildCache?.targetFile === selectedArtifactPath ? buildCache.reviewPayload : await runBuild({ silent: true });
+      const reviewPayload = prepareDeploymentPayload();
       const raw = await sendLyquidDeployment({
         artifact: currentArtifact,
         bartenderAddress,
@@ -236,7 +210,6 @@ export default function HomePage() {
                 setProject(nextProject);
                 setSelectedArtifactPath(nextProject.selectedArtifactPath);
                 setConstructorValues({});
-                setBuildCache(null);
                 setTabs([]);
                 setActiveTabId(null);
               }}
@@ -271,13 +244,10 @@ export default function HomePage() {
               selectedArtifactPath={selectedArtifactPath}
               constructorFields={currentArtifact?.constructorParameters ?? []}
               constructorValues={constructorValues}
-              isBuilding={isBuilding}
               isDeploying={isDeploying}
               onConstructorValuesChange={(values) => {
                 setConstructorValues(values);
-                setBuildCache(null);
               }}
-              onBuild={() => void runBuild()}
               onDeploy={() => void runDeploy()}
             />
           }

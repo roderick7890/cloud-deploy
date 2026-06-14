@@ -1,4 +1,4 @@
-import { Hammer, Rocket } from "lucide-react";
+import { Rocket } from "lucide-react";
 import type { AbiParameter } from "viem";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,8 @@ type ActionDeckProps = {
   selectedArtifactPath: string;
   constructorFields: AbiParameter[];
   constructorValues: Record<string, string>;
-  isBuilding: boolean;
   isDeploying: boolean;
   onConstructorValuesChange: (values: Record<string, string>) => void;
-  onBuild: () => void;
   onDeploy: () => void;
 };
 
@@ -23,10 +21,8 @@ export function ActionDeck({
   selectedArtifactPath,
   constructorFields,
   constructorValues,
-  isBuilding,
   isDeploying,
   onConstructorValuesChange,
-  onBuild,
   onDeploy
 }: ActionDeckProps) {
   const hasTarget = Boolean(selectedArtifactPath);
@@ -60,19 +56,6 @@ export function ActionDeck({
         ) : (
           <p className="text-sm text-muted-foreground">No user constructor parameters.</p>
         )}
-      </section>
-
-      <section className="flex min-h-0 flex-col justify-between gap-4 rounded-md border bg-background p-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Hammer className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">Prepare</h2>
-          </div>
-          <p className="text-sm text-muted-foreground">Create transaction data</p>
-        </div>
-        <Button type="button" disabled={!hasTarget || isBuilding} onClick={onBuild}>
-          {isBuilding ? "Preparing..." : "Prepare"}
-        </Button>
       </section>
 
       <section className="flex min-h-0 flex-col justify-between gap-4 rounded-md border bg-background p-4">
