@@ -55,4 +55,28 @@ describe("browser-wallet-client", () => {
       ]
     });
   });
+
+  it("sends contract creation transactions with a null target", async () => {
+    const request = vi.fn().mockResolvedValueOnce("0xabc123");
+    const walletClient = createBrowserWalletTransactionClient({ request });
+
+    await expect(
+      walletClient.sendTransaction({
+        account: "0x1111111111111111111111111111111111111111",
+        to: null,
+        data: "0xabcdef"
+      })
+    ).resolves.toBe("0xabc123");
+
+    expect(request).toHaveBeenCalledWith({
+      method: "eth_sendTransaction",
+      params: [
+        {
+          from: "0x1111111111111111111111111111111111111111",
+          to: null,
+          data: "0xabcdef"
+        }
+      ]
+    });
+  });
 });

@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
-import type { UploadedProject } from "@/types/deploy";
+import { parseLyquidDeploymentArtifact, type UploadedArtifactBundle } from "@/utils/lyquid-deployment-artifact";
 import { ResourceExplorer } from "./resource-explorer";
 
 function folderFile(contents: string, name: string, path: string) {
@@ -11,17 +11,24 @@ function folderFile(contents: string, name: string, path: string) {
   return file;
 }
 
-function uploadedProject(): UploadedProject {
+const descriptor = JSON.stringify({
+  name: "demo",
+  deploymentBytecode: "0x6001",
+  imageHash: `0x${"1".repeat(64)}`,
+  repoHint: "registry.local/demo:latest"
+});
+
+function uploadedProject(): UploadedArtifactBundle {
   return {
     metadata: { name: "demo", fileCount: 3, totalSize: 42 },
     rootName: "demo",
     files: [
-      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
+      folderFile(descriptor, "deploy.json", "demo/deploy.json"),
       folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs"),
       folderFile("notes", "README.md", "demo/README.md")
     ],
     tree: [
-      { name: "Cargo.toml", path: "demo/Cargo.toml", type: "file" },
+      { name: "deploy.json", path: "demo/deploy.json", type: "file" },
       { name: "README.md", path: "demo/README.md", type: "file" },
       {
         name: "src",
@@ -30,8 +37,8 @@ function uploadedProject(): UploadedProject {
         children: [{ name: "lib.rs", path: "demo/src/lib.rs", type: "file" }]
       }
     ],
-    tomlFiles: [{ name: "Cargo.toml", path: "demo/Cargo.toml", content: '[package]\nname = "demo"\n', size: 24 }],
-    selectedTomlPath: ""
+    artifactFiles: [{ name: "deploy.json", path: "demo/deploy.json", content: descriptor, size: descriptor.length, artifact: parseLyquidDeploymentArtifact(JSON.parse(descriptor)) }],
+    selectedArtifactPath: ""
   };
 }
 
@@ -40,24 +47,24 @@ describe("ResourceExplorer", () => {
     const user = userEvent.setup();
     const onProjectChange = vi.fn();
     const onOpenFile = vi.fn();
-    const files = [folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml")];
+    const files = [folderFile(descriptor, "deploy.json", "demo/deploy.json")];
 
     renderWithProviders(
-      <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={onProjectChange} onSelectTarget={vi.fn()} onOpenFile={onOpenFile} />
+      <ResourceExplorer project={null} selectedArtifactPath="" onProjectChange={onProjectChange} onSelectTarget={vi.fn()} onOpenFile={onOpenFile} />
     );
 
     expect(screen.queryByText("Project folder")).not.toBeInTheDocument();
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), files);
+    await user.upload(screen.getByLabelText("Drop a build artifact folder here or choose one."), files);
 
-    await waitFor(() => expect(onProjectChange).toHaveBeenCalledWith(expect.objectContaining({ selectedTomlPath: "" })));
+    await waitFor(() => expect(onProjectChange).toHaveBeenCalledWith(expect.objectContaining({ selectedArtifactPath: "demo/deploy.json" })));
   });
 
   it("keeps the hidden folder input inside the visible upload target", () => {
     renderWithProviders(
-      <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+      <ResourceExplorer project={null} selectedArtifactPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
     );
 
-    const input = screen.getByLabelText("Drop a folder here or choose one.");
+    const input = screen.getByLabelText("Drop a build artifact folder here or choose one.");
     const uploadTarget = input.closest("label");
 
     expect(uploadTarget).toBeInTheDocument();
@@ -68,47 +75,47 @@ describe("ResourceExplorer", () => {
 
   it("shows a compact change-folder action after a project exists", () => {
     renderWithProviders(
-      <ResourceExplorer project={uploadedProject()} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+      <ResourceExplorer project={uploadedProject()} selectedArtifactPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
     );
 
     expect(screen.getByLabelText("Change folder")).toBeInTheDocument();
   });
 
-  it("uses a radio control to select the TOML target without selected background semantics", async () => {
+  it("uses a radio control to select the artifact target without selected background semantics", async () => {
     const user = userEvent.setup();
     const onSelectTarget = vi.fn();
 
     renderWithProviders(
       <ResourceExplorer
         project={uploadedProject()}
-        selectedTomlPath=""
+        selectedArtifactPath=""
         onProjectChange={vi.fn()}
         onSelectTarget={onSelectTarget}
         onOpenFile={vi.fn()}
       />
     );
 
-    const target = screen.getByRole("radio", { name: "Use demo/Cargo.toml as deploy target" });
+    const target = screen.getByRole("radio", { name: "Use demo/deploy.json as deployment artifact" });
     expect(target).not.toBeChecked();
-    expect(screen.getByRole("button", { name: "Open demo/Cargo.toml" })).not.toHaveClass("bg-secondary");
+    expect(screen.getByRole("button", { name: "Open demo/deploy.json" })).not.toHaveClass("bg-secondary");
 
     await user.click(target);
-    expect(onSelectTarget).toHaveBeenCalledWith("demo/Cargo.toml");
+    expect(onSelectTarget).toHaveBeenCalledWith("demo/deploy.json");
   });
 
-  it("filters resources with the Toml only control", async () => {
+  it("filters resources with the artifact JSON only control", async () => {
     const user = userEvent.setup();
 
     renderWithProviders(
-      <ResourceExplorer project={uploadedProject()} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+      <ResourceExplorer project={uploadedProject()} selectedArtifactPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
     );
 
     expect(screen.getByText("README.md")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Toml only" }));
+    await user.click(screen.getByRole("button", { name: "Artifact JSON only" }));
 
     expect(screen.queryByText("README.md")).not.toBeInTheDocument();
     expect(screen.queryByText("src")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Open demo/Cargo.toml" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open demo/deploy.json" })).toBeInTheDocument();
   });
 
   it("shows parse failures in a dialog", async () => {
@@ -116,12 +123,12 @@ describe("ResourceExplorer", () => {
     const files = [folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")];
 
     renderWithProviders(
-      <ResourceExplorer project={null} selectedTomlPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
+      <ResourceExplorer project={null} selectedArtifactPath="" onProjectChange={vi.fn()} onSelectTarget={vi.fn()} onOpenFile={vi.fn()} />
     );
 
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), files);
+    await user.upload(screen.getByLabelText("Drop a build artifact folder here or choose one."), files);
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(screen.getByText("No TOML build targets were found.")).toBeInTheDocument();
+    expect(screen.getByText("No Lyquid deployment artifact descriptor JSON was found.")).toBeInTheDocument();
   });
 });

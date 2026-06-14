@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { lyquidTestAbi } from "@/test/test-abi";
@@ -54,43 +54,47 @@ describe("shared components", () => {
     expect(screen.getByText("Build method does not exist.")).toBeInTheDocument();
   });
 
-  it("updates method options from a valid ABI draft before settings are saved", async () => {
-    Element.prototype.scrollIntoView = vi.fn();
+  it("saves RPC and Bartender address from settings", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
 
     renderWithProviders(
       <SettingsDialog
         open
         onOpenChange={vi.fn()}
-        settings={{ rpcEndpoint: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
-        methodOptions={[]}
-        methodErrors={{}}
-        onSave={vi.fn()}
+        settings={{ rpcEndpoint: "", bartenderAddress: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
+        onSave={onSave}
       />
     );
 
-    fireEvent.change(screen.getByLabelText("ABI"), { target: { value: lyquidTestAbi } });
-    fireEvent.keyDown(screen.getByRole("combobox", { name: "Build Method" }), { key: "ArrowDown" });
+    await user.type(screen.getByLabelText("RPC Endpoint"), "http://localhost:8545");
+    await user.type(screen.getByLabelText("Bartender Contract Address"), "0x0000000000000000000000000000000000000001");
+    await user.click(screen.getByRole("button", { name: "Save Settings" }));
 
-    expect(await screen.findByText("compileProject(bytes)")).toBeInTheDocument();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rpcEndpoint: "http://localhost:8545",
+        bartenderAddress: "0x0000000000000000000000000000000000000001"
+      })
+    );
   });
 
-  it("stretches settings form controls to the dialog content width", () => {
+  it("only shows RPC and Bartender controls in settings", () => {
     renderWithProviders(
       <SettingsDialog
         open
         onOpenChange={vi.fn()}
-        settings={{ rpcEndpoint: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
-        methodOptions={[]}
-        methodErrors={{}}
+        settings={{ rpcEndpoint: "", bartenderAddress: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
         onSave={vi.fn()}
       />
     );
 
     expect(screen.getByLabelText("RPC Endpoint")).toHaveClass("w-full");
-    expect(screen.getByLabelText("Lyquid ID")).toHaveClass("w-full");
-    expect(screen.getByLabelText("ABI")).toHaveClass("w-full");
-    expect(screen.getByRole("combobox", { name: "Build Method" })).toHaveClass("w-full");
-    expect(screen.getByRole("combobox", { name: "Deploy Method" })).toHaveClass("w-full");
+    expect(screen.getByLabelText("Bartender Contract Address")).toHaveClass("w-full");
+    expect(screen.queryByLabelText("Lyquid ID")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("ABI")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Build Method")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Deploy Method")).not.toBeInTheDocument();
   });
 
   it("stretches constructor inputs to their form row width", () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { ActionDeck } from "@/components/workbench/action-deck";
@@ -11,22 +11,19 @@ import { WorkbenchTabs } from "@/components/workbench/workbench-tabs";
 import { AppShell } from "@/layout/app-shell";
 import { useSettingsStore } from "@/store/settings-store";
 import { useWorkbenchStore } from "@/store/workbench-store";
-import type { UploadedProject } from "@/types/deploy";
 import type { DeployHistoryRecord, WorkbenchEnv, WorkbenchTab } from "@/types/workbench";
-import { findMethod } from "@/utils/abi/abi-utils";
-import { prepareBuildMethodCall } from "@/utils/build-args-utils";
-import { prepareDeployMethodCall } from "@/utils/deploy-args-utils";
-import { hashPayload } from "@/utils/hash-utils";
+import { buildLyquidDeploymentTransaction, type UploadedArtifactBundle } from "@/utils/lyquid-deployment-artifact";
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
-import { dispatchSelectedMethod } from "@/utils/request/request-dispatcher";
+import { sendLyquidDeployment } from "@/utils/request/lyquid-deployment-sender";
 import { fetchRpcTransaction } from "@/utils/request/rpc-transaction-client";
-import { type BrowserWindowWithWallet, type BuildCacheEntry, createRunTitle, findPendingTransactionTabs, getErrorMessage, getTxHash, isRecord } from "./workbench-page-utils";
+import { type BrowserWindowWithWallet, type BuildCacheEntry, createRunTitle, getErrorMessage, getTxHash } from "./workbench-page-utils";
 import { WorkbenchSettingsDialog } from "./workbench-settings-dialog";
 
 export default function HomePage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [project, setProject] = useState<UploadedProject | null>(null);
-  const [selectedTomlPath, setSelectedTomlPath] = useState("");
+  const [project, setProject] = useState<UploadedArtifactBundle | null>(null);
+  const [selectedArtifactPath, setSelectedArtifactPath] = useState("");
+  const [constructorValues, setConstructorValues] = useState<Record<string, string>>({});
   const [tabs, setTabs] = useState<WorkbenchTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [buildCache, setBuildCache] = useState<BuildCacheEntry | null>(null);
@@ -41,23 +38,19 @@ export default function HomePage() {
   const walletLabel = account.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "Connect Wallet";
   const connectWallet = () => connect({ connector: injected() });
   const copyWalletAddress = () => (account.address ? navigator.clipboard.writeText(account.address) : undefined);
-  const currentProject = useMemo(
-    () => (project ? { ...project, selectedTomlPath } : null),
-    [project, selectedTomlPath]
+  const currentArtifactFile = useMemo(
+    () => project?.artifactFiles.find((file) => file.path === selectedArtifactPath) ?? null,
+    [project, selectedArtifactPath]
   );
+  const currentArtifact = currentArtifactFile?.artifact ?? null;
+  const bartenderAddress = settings.bartenderAddress;
 
   const getEnv = (): WorkbenchEnv => {
-    const buildMethod = settings.parsedAbi ? findMethod(settings.parsedAbi, settings.buildMethod) : null;
-    const deployMethod = settings.parsedAbi ? findMethod(settings.parsedAbi, settings.deployMethod) : null;
-
     return {
       rpcEndpoint: settings.rpcEndpoint,
-      lyquidId: settings.lyquidId,
+      bartenderAddress,
       walletAddress: account.address,
-      buildMethod: settings.buildMethod,
-      deployMethod: settings.deployMethod,
-      buildMethodAbiItem: buildMethod?.abiItem,
-      deployMethodAbiItem: deployMethod?.abiItem
+      artifactName: currentArtifact?.name
     };
   };
 
@@ -82,7 +75,9 @@ export default function HomePage() {
   };
 
   const handleSelectTarget = (path: string) => {
-    setSelectedTomlPath(path);
+    setSelectedArtifactPath(path);
+    setConstructorValues({});
+    setBuildCache(null);
     openFileTab(path);
   };
 
@@ -97,40 +92,42 @@ export default function HomePage() {
   };
 
   const runBuild = async (options?: { silent?: boolean }) => {
-    if (!settings.parsedAbi || !currentProject || !selectedTomlPath) {
-      throw new Error("Upload a project, select a TOML target, and configure a valid ABI before build.");
+    if (!currentArtifact || !selectedArtifactPath) {
+      throw new Error("Upload a build artifact folder and select an artifact descriptor before preparing deploy data.");
+    }
+
+    if (!bartenderAddress) {
+      throw new Error("Configure the network Bartender contract address in Settings before preparing deploy data.");
     }
 
     const now = Date.now();
-    const tabId = `build:${selectedTomlPath}:${now}`;
+    const tabId = `build:${selectedArtifactPath}:${now}`;
     const env = getEnv();
     if (!options?.silent) {
-      upsertTab({ id: tabId, kind: "build-run", title: createRunTitle("build", selectedTomlPath, now), createdAt: now, targetFile: selectedTomlPath, status: "loading", env });
-    }
-
-    const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
-    if (!buildMethod) {
-      throw new Error("Selected build method does not exist.");
+      upsertTab({ id: tabId, kind: "build-run", title: createRunTitle("build", selectedArtifactPath, now), createdAt: now, targetFile: selectedArtifactPath, status: "loading", env });
     }
 
     try {
       setIsBuilding(true);
-      const { args, sourceHash } = await prepareBuildMethodCall({ method: buildMethod, project: currentProject });
-    const raw = await dispatchSelectedMethod({
-        parsedAbi: settings.parsedAbi,
-        selectedMethod: settings.buildMethod,
-        args,
-        context: {
-          rpcEndpoint: settings.rpcEndpoint,
-          lyquidId: settings.lyquidId,
-          accountAddress: account.address,
-          offChainFetch: (input, init) => fetch(input, init)
-        }
+      const transaction = buildLyquidDeploymentTransaction({
+        artifact: currentArtifact,
+        bartenderAddress,
+        constructorValues
       });
-      const artifactHash = await hashPayload(raw);
-      const reviewPayload = { hashes: { sourceHash, artifactHash }, payload: raw };
+      const raw = {
+        artifact: {
+          name: currentArtifact.name,
+          imageHash: currentArtifact.imageHash,
+          repoHint: currentArtifact.repoHint,
+          abiStr: currentArtifact.abiStr,
+          osVersion: currentArtifact.osVersion
+        },
+        transaction: transaction.submittedTransaction,
+        parameters: transaction.parameters
+      };
+      const reviewPayload = { hashes: { artifactHash: currentArtifact.imageHash }, payload: raw };
       if (!options?.silent) {
-        setBuildCache({ targetFile: selectedTomlPath, reviewPayload });
+        setBuildCache({ targetFile: selectedArtifactPath, reviewPayload });
       }
       if (!options?.silent) {
         patchTab(tabId, { status: "success", raw });
@@ -138,7 +135,7 @@ export default function HomePage() {
       return reviewPayload;
     } catch (error) {
       if (!options?.silent) {
-        patchTab(tabId, { status: "error", error: getErrorMessage(error, "Build failed.") });
+        patchTab(tabId, { status: "error", error: getErrorMessage(error, "Prepare failed.") });
       }
       throw error;
     } finally {
@@ -148,9 +145,9 @@ export default function HomePage() {
 
   const runDeploy = async () => {
     const now = Date.now();
-    const tabId = `deploy:${selectedTomlPath || "target"}:${now}`;
+    const tabId = `deploy:${selectedArtifactPath || "target"}:${now}`;
     const env = getEnv();
-    upsertTab({ id: tabId, kind: "deploy-run", title: createRunTitle("deploy", selectedTomlPath || "target", now), createdAt: now, targetFile: selectedTomlPath, status: "loading", env });
+    upsertTab({ id: tabId, kind: "deploy-run", title: createRunTitle("deploy", selectedArtifactPath || "target", now), createdAt: now, targetFile: selectedArtifactPath, status: "loading", env });
 
     try {
       setIsDeploying(true);
@@ -158,37 +155,36 @@ export default function HomePage() {
         throw new Error("Connect wallet before deploying.");
       }
 
-      if (!settings.parsedAbi || !currentProject || !selectedTomlPath) {
-        throw new Error("Upload a project, select a TOML target, and configure a valid ABI before deploy.");
+      if (!currentArtifact || !selectedArtifactPath) {
+        throw new Error("Upload a build artifact folder and select an artifact descriptor before deploy.");
       }
 
-      const buildMethod = findMethod(settings.parsedAbi, settings.buildMethod);
-      const deployMethod = findMethod(settings.parsedAbi, settings.deployMethod);
-      if (!buildMethod || !deployMethod) {
-        throw new Error("Selected build or deploy method does not exist.");
+      if (!bartenderAddress) {
+        throw new Error("Configure the network Bartender contract address in Settings before deploy.");
       }
 
-      const reviewPayload = buildCache?.targetFile === selectedTomlPath ? buildCache.reviewPayload : await runBuild({ silent: true });
-      const { args, deployAbi } = prepareDeployMethodCall({ buildMethod, deployMethod, project: currentProject, reviewPayload });
-      const raw = await dispatchSelectedMethod({
-        parsedAbi: settings.parsedAbi,
-        selectedMethod: settings.deployMethod,
-        args,
+      const reviewPayload = buildCache?.targetFile === selectedArtifactPath ? buildCache.reviewPayload : await runBuild({ silent: true });
+      const raw = await sendLyquidDeployment({
+        artifact: currentArtifact,
+        bartenderAddress,
+        constructorValues,
         context: {
           rpcEndpoint: settings.rpcEndpoint,
-          lyquidId: settings.lyquidId,
           accountAddress: account.address,
           walletClient: createBrowserWalletTransactionClient((window as BrowserWindowWithWallet).ethereum),
           offChainFetch: (input, init) => fetch(input, init)
         }
       });
-      const displayRaw = isRecord(raw) ? { ...raw, ...(deployAbi ? { deployAbi } : {}) } : raw;
+      const displayRaw = {
+        ...raw,
+        preparedPayload: reviewPayload.payload,
+        contractAbi: currentArtifact.contractAbi
+      };
       const txHash = getTxHash(raw);
-      const transactionRaw = isRecord(raw) && isRecord(raw.transaction) ? raw.transaction : undefined;
 
-      patchTab(tabId, { status: transactionRaw ? "success" : "loading", raw: displayRaw, transactionRaw });
+      patchTab(tabId, { status: "success", raw: displayRaw, transactionRaw: raw.receipt });
       if (txHash) {
-        addDeployHistory({ id: `${txHash}:${now}`, txHash: txHash as `0x${string}`, timestamp: now, targetFile: selectedTomlPath, status: "submitted", env });
+        addDeployHistory({ id: `${txHash}:${now}`, txHash: txHash as `0x${string}`, timestamp: now, targetFile: selectedArtifactPath, status: raw.status === "success" ? "success" : "submitted", env });
       }
     } catch (error) {
       patchTab(tabId, { status: "error", error: getErrorMessage(error, "Deploy failed.") });
@@ -218,39 +214,6 @@ export default function HomePage() {
     }
   };
 
-  useEffect(() => {
-    const pendingTabs = findPendingTransactionTabs(tabs);
-    if (pendingTabs.length === 0) {
-      return undefined;
-    }
-
-    let cancelled = false;
-    const lookupTransactions = async () => {
-      await Promise.all(
-        pendingTabs.map(async ({ tabId, transactionHash, rpcEndpoint }) => {
-          try {
-            const transactionRaw = await fetchRpcTransaction({ rpcEndpoint, transactionHash: transactionHash as `0x${string}`, offChainFetch: (input, init) => fetch(input, init) });
-            if (!cancelled && transactionRaw) {
-              patchTab(tabId, { status: "success", transactionRaw, error: undefined });
-            }
-          } catch (error) {
-            if (!cancelled) {
-              patchTab(tabId, { error: getErrorMessage(error, "Failed to fetch RPC transaction.") });
-            }
-          }
-        })
-      );
-    };
-
-    void lookupTransactions();
-    const intervalId = window.setInterval(() => void lookupTransactions(), 2000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
-  }, [tabs]);
-
   return (
     <>
       <AppShell
@@ -268,10 +231,12 @@ export default function HomePage() {
           resourcePane={
             <ResourceExplorer
               project={project}
-              selectedTomlPath={selectedTomlPath}
+              selectedArtifactPath={selectedArtifactPath}
               onProjectChange={(nextProject) => {
                 setProject(nextProject);
-                setSelectedTomlPath("");
+                setSelectedArtifactPath(nextProject.selectedArtifactPath);
+                setConstructorValues({});
+                setBuildCache(null);
                 setTabs([]);
                 setActiveTabId(null);
               }}
@@ -287,11 +252,11 @@ export default function HomePage() {
               onActiveTabChange={setActiveTabId}
               onCloseTab={closeTab}
               renderTabContent={(tab) =>
-                tab.kind === "file-detail" && currentProject ? (
+                tab.kind === "file-detail" && project ? (
                   <FileDetailTab
                     path={tab.targetFile ?? ""}
-                    files={currentProject.files}
-                    tomlFiles={currentProject.tomlFiles}
+                    files={project.files}
+                    artifactFiles={project.artifactFiles}
                     onBack={() => closeTab(tab.id)}
                     onDeploy={() => void runDeploy()}
                   />
@@ -301,7 +266,21 @@ export default function HomePage() {
               }
             />
           }
-          actionsPane={<ActionDeck selectedTomlPath={selectedTomlPath} isBuilding={isBuilding} isDeploying={isDeploying} onBuild={() => void runBuild()} onDeploy={() => void runDeploy()} />}
+          actionsPane={
+            <ActionDeck
+              selectedArtifactPath={selectedArtifactPath}
+              constructorFields={currentArtifact?.constructorParameters ?? []}
+              constructorValues={constructorValues}
+              isBuilding={isBuilding}
+              isDeploying={isDeploying}
+              onConstructorValuesChange={(values) => {
+                setConstructorValues(values);
+                setBuildCache(null);
+              }}
+              onBuild={() => void runBuild()}
+              onDeploy={() => void runDeploy()}
+            />
+          }
         />
       </AppShell>
       <WorkbenchSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

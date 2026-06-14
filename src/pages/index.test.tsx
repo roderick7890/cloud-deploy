@@ -1,6 +1,5 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { encodeFunctionResult } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
 import { useSettingsStore } from "@/store/settings-store";
@@ -8,24 +7,16 @@ import { useWorkbenchStore } from "@/store/workbench-store";
 import HomePage from "./index";
 
 const fetchRpcTransactionMock = vi.hoisted(() => vi.fn());
-const dispatchSelectedMethodMock = vi.hoisted(() => vi.fn());
+const sendLyquidDeploymentMock = vi.hoisted(() => vi.fn());
 const accountAddressMock = vi.hoisted(() => ({ value: undefined as `0x${string}` | undefined }));
-const pageTestAbi = [
-  {
-    type: "function",
-    name: "compileProject",
-    stateMutability: "nonpayable",
-    inputs: [{ name: "source", type: "bytes", internalType: "bytes" }],
-    outputs: [{ name: "payload", type: "bytes", internalType: "bytes" }]
-  },
-  {
-    type: "function",
-    name: "publishProject",
-    stateMutability: "payable",
-    inputs: [{ name: "payload", type: "bytes", internalType: "bytes" }],
-    outputs: [{ name: "lyquidId", type: "string", internalType: "string" }]
-  }
-] as const;
+const uploadLabel = "Drop a build artifact folder here or choose one.";
+const artifactDescriptor = JSON.stringify({
+  name: "counter",
+  deploymentBytecode: "0x60016002",
+  imageHash: `0x${"1".repeat(64)}`,
+  repoHint: "registry.local/counter:latest",
+  abiStr: "uint256 initialValue"
+});
 
 vi.mock("wagmi", () => ({
   useAccount: () => ({ address: accountAddressMock.value }),
@@ -37,12 +28,13 @@ vi.mock("wagmi/connectors", () => ({
   injected: () => ({ id: "injected" })
 }));
 
-vi.mock("@/utils/request/rpc-transaction-client", () => ({
+vi.mock("@/utils/request/rpc-transaction-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/utils/request/rpc-transaction-client")>()),
   fetchRpcTransaction: fetchRpcTransactionMock
 }));
 
-vi.mock("@/utils/request/request-dispatcher", () => ({
-  dispatchSelectedMethod: dispatchSelectedMethodMock
+vi.mock("@/utils/request/lyquid-deployment-sender", () => ({
+  sendLyquidDeployment: sendLyquidDeploymentMock
 }));
 
 describe("HomePage", () => {
@@ -54,9 +46,16 @@ describe("HomePage", () => {
     return file;
   }
 
+  async function uploadArtifact(user: ReturnType<typeof userEvent.setup>) {
+    await user.upload(screen.getByLabelText(uploadLabel), [
+      folderFile(artifactDescriptor, "deploy.json", "demo/deploy.json"),
+      folderFile("wasm bytes", "counter.wasm", "demo/counter.wasm")
+    ]);
+  }
+
   beforeEach(() => {
     fetchRpcTransactionMock.mockReset();
-    dispatchSelectedMethodMock.mockReset();
+    sendLyquidDeploymentMock.mockReset();
     accountAddressMock.value = undefined;
     Object.defineProperty(window, "ethereum", {
       configurable: true,
@@ -66,105 +65,85 @@ describe("HomePage", () => {
     useSettingsStore.setState(useSettingsStore.getInitialState(), true);
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
+      bartenderAddress: "0x0000000000000000000000000000000000000001",
       lyquidId: "",
-      abi: JSON.stringify(pageTestAbi),
-      buildMethod: "compileProject(bytes)",
-      deployMethod: "publishProject(bytes)"
+      abi: "[]",
+      buildMethod: "",
+      deployMethod: ""
     });
   });
 
-  it("renders upload as the first step", () => {
+  it("renders artifact upload as the first step", () => {
     renderWithProviders(<HomePage />);
     expect(screen.getByText("Cloud Deploy")).toBeInTheDocument();
-    expect(screen.getByLabelText("Drop a folder here or choose one.")).toBeInTheDocument();
+    expect(screen.getByLabelText(uploadLabel)).toBeInTheDocument();
     expect(screen.queryByText("Upload")).not.toBeInTheDocument();
   });
 
-  it("shows build and deploy actions after explicitly selecting a TOML target", async () => {
+  it("shows prepare and deploy actions after selecting an artifact descriptor", async () => {
     const user = userEvent.setup();
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
-      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
-      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
-    ]);
+    await uploadArtifact(user);
 
-    expect(await screen.findByText("No TOML target selected")).toBeInTheDocument();
-    await user.click(screen.getByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
-
-    expect(screen.getByRole("button", { name: "Build" })).toBeInTheDocument();
+    expect(await screen.findByLabelText("initialValue")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Prepare" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deploy" })).toBeInTheDocument();
   });
 
-  it("opens the TOML file content when selecting a deploy target", async () => {
+  it("opens the artifact descriptor content when selecting it", async () => {
     const user = userEvent.setup();
 
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
-      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
-      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
-    ]);
-    await user.click(await screen.findByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
+    await uploadArtifact(user);
+    await user.click(await screen.findByRole("button", { name: "Open demo/deploy.json" }));
 
-    expect(screen.getByRole("tab", { name: "Cargo.toml" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByDisplayValue(/name = "demo"/)).toHaveAttribute("readonly");
+    expect(screen.getByRole("tab", { name: "deploy.json" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByDisplayValue(/deploymentBytecode/)).toHaveAttribute("readonly");
   });
 
-  it("auto-builds before deploy when no build payload exists for the selected target", async () => {
+  it("prepares contract creation calldata from the selected artifact", async () => {
     const user = userEvent.setup();
-    accountAddressMock.value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-    const buildRaw = encodeFunctionResult({
-      abi: pageTestAbi,
-      functionName: "compileProject",
-      result: "0x1234"
-    });
-    dispatchSelectedMethodMock
-      .mockResolvedValueOnce(buildRaw)
-      .mockResolvedValueOnce({ transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318", status: "submitted" });
 
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
-      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
-      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
-    ]);
-    await user.click(await screen.findByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
-    await user.click(screen.getByRole("button", { name: "Deploy" }));
+    await uploadArtifact(user);
+    await user.type(await screen.findByLabelText("initialValue"), "7");
+    await user.click(screen.getByRole("button", { name: "Prepare" }));
 
-    await waitFor(() => {
-      expect(dispatchSelectedMethodMock).toHaveBeenCalledTimes(2);
-    });
-    expect(dispatchSelectedMethodMock.mock.calls[0][0]).toMatchObject({ selectedMethod: "compileProject(bytes)" });
-    expect(dispatchSelectedMethodMock.mock.calls[1][0]).toMatchObject({ selectedMethod: "publishProject(bytes)" });
-    expect(await screen.findByText(/transactionHash/)).toBeInTheDocument();
+    expect(await screen.findByText(/calldata/)).toBeInTheDocument();
+    expect(screen.getByText(/0x60016002/)).toBeInTheDocument();
   });
 
-  it("updates a pending deploy transaction when the configured RPC can return it", async () => {
+  it("deploys by sending a wallet-signed Lyquid create transaction", async () => {
     const user = userEvent.setup();
-    accountAddressMock.value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
     const transactionHash = "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318";
-    const buildRaw = encodeFunctionResult({
-      abi: pageTestAbi,
-      functionName: "compileProject",
-      result: "0x1234"
+    accountAddressMock.value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    sendLyquidDeploymentMock.mockResolvedValue({
+      transactionHash,
+      contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      lyquidId: "Lyquid-counter",
+      status: "success",
+      receipt: { transactionHash, status: "0x1", contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" },
+      submittedTransaction: { to: null, calldata: "0x60016002", bartender: "0x0000000000000000000000000000000000000001" }
     });
-    dispatchSelectedMethodMock.mockResolvedValueOnce(buildRaw).mockResolvedValueOnce({ transactionHash, status: "submitted" });
-    fetchRpcTransactionMock.mockResolvedValue({ hash: transactionHash, input: "0xabcdef" });
 
     renderWithProviders(<HomePage />);
-    await user.upload(screen.getByLabelText("Drop a folder here or choose one."), [
-      folderFile('[package]\nname = "demo"\n', "Cargo.toml", "demo/Cargo.toml"),
-      folderFile("pub fn run() {}", "lib.rs", "demo/src/lib.rs")
-    ]);
-    await user.click(await screen.findByRole("radio", { name: "Use demo/Cargo.toml as deploy target" }));
+    await uploadArtifact(user);
+    await user.type(await screen.findByLabelText("initialValue"), "7");
     await user.click(screen.getByRole("button", { name: "Deploy" }));
 
     await waitFor(() => {
-      expect(fetchRpcTransactionMock).toHaveBeenCalledWith({
-        rpcEndpoint: "http://localhost:8545",
-        transactionHash,
-        offChainFetch: expect.any(Function)
-      });
+      expect(sendLyquidDeploymentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          bartenderAddress: "0x0000000000000000000000000000000000000001",
+          constructorValues: { initialValue: "7" },
+          context: expect.objectContaining({
+            rpcEndpoint: "http://localhost:8545",
+            accountAddress: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          })
+        })
+      );
     });
-    expect(await screen.findByLabelText("Transaction found")).toBeInTheDocument();
+    expect(await screen.findByText(/Lyquid-counter/)).toBeInTheDocument();
   });
 
   it("opens deploy history with the original deploy run title shape", async () => {
@@ -174,11 +153,11 @@ describe("HomePage", () => {
       id: "history-1",
       txHash: transactionHash,
       timestamp: 1778916000000,
-      targetFile: "demo/Cargo.toml",
-      status: "submitted",
+      targetFile: "demo/deploy.json",
+      status: "success",
       env: {
         rpcEndpoint: "http://localhost:8545",
-        deployMethodAbiItem: { type: "function", name: "deploy", inputs: [] }
+        artifactName: "counter"
       }
     });
     const user = userEvent.setup();
@@ -186,7 +165,7 @@ describe("HomePage", () => {
     renderWithProviders(<HomePage />);
     await user.click(screen.getByRole("button", { name: /Open deploy history/ }));
 
-    expect(await screen.findByRole("tab", { name: "deploy_Cargo.toml_1778916000000" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "history_Cargo.toml_1778916000000" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "deploy_deploy.json_1778916000000" })).toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "history_deploy.json_1778916000000" })).not.toBeInTheDocument();
   });
 });

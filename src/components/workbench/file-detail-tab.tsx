@@ -2,12 +2,12 @@ import type { ReactNode } from "react";
 import { ArrowLeft, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import type { ProjectTomlFile } from "@/types/deploy";
+import type { ArtifactDescriptorFile } from "@/utils/lyquid-deployment-artifact";
 
 type FileDetailTabProps = {
   path: string;
   files: File[];
-  tomlFiles: ProjectTomlFile[];
+  artifactFiles: ArtifactDescriptorFile[];
   onBack?: () => void;
   onDeploy: () => void;
 };
@@ -31,15 +31,15 @@ function PreviewHeader({ title, actions, onBack }: { title: string; actions?: Re
   );
 }
 
-export function FileDetailTab({ path, files, tomlFiles, onBack, onDeploy }: FileDetailTabProps) {
-  const tomlFile = tomlFiles.find((file) => file.path === path);
+export function FileDetailTab({ path, files, artifactFiles, onBack, onDeploy }: FileDetailTabProps) {
+  const artifactFile = artifactFiles.find((file) => file.path === path);
   const file = files.find((item) => getFilePath(item) === path);
 
-  if (tomlFile) {
+  if (artifactFile) {
     return (
       <div className="space-y-3">
         <PreviewHeader
-          title={tomlFile.path}
+          title={artifactFile.path}
           onBack={onBack}
           actions={(
             <Button type="button" variant="outline" size="sm" onClick={onDeploy}>
@@ -48,7 +48,7 @@ export function FileDetailTab({ path, files, tomlFiles, onBack, onDeploy }: File
             </Button>
           )}
         />
-        <Textarea value={tomlFile.content} readOnly className="min-h-96 w-full font-mono border-none shadow-none" />
+        <Textarea value={artifactFile.content} readOnly className="min-h-96 w-full font-mono border-none shadow-none" />
       </div>
     );
   }
@@ -57,7 +57,7 @@ export function FileDetailTab({ path, files, tomlFiles, onBack, onDeploy }: File
     <div className="space-y-2">
       <PreviewHeader title={path} onBack={onBack} />
       <p className="text-sm text-muted-foreground">{file ? `${file.size} bytes.` : "File metadata unavailable."}</p>
-      <p className="text-sm text-muted-foreground">Only TOML files are previewed.</p>
+      <p className="text-sm text-muted-foreground">Only artifact descriptor JSON files are previewed.</p>
     </div>
   );
 }

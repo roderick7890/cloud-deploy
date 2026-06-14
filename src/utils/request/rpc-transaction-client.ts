@@ -6,6 +6,11 @@ type FetchRpcTransactionInput = {
   offChainFetch: typeof fetch;
 };
 
+type WaitForRpcTransactionReceiptInput = FetchRpcTransactionInput & {
+  pollIntervalMs?: number;
+  timeoutMs?: number;
+};
+
 function getNetworkErrorReason(error: unknown) {
   if (error instanceof Error && error.message.length > 0) {
     return error.message;
@@ -84,4 +89,74 @@ export async function fetchRpcTransaction(input: FetchRpcTransactionInput) {
   }
 
   return (raw as { result: unknown }).result;
+}
+
+export async function fetchRpcTransactionReceiptResponse({ rpcEndpoint, transactionHash, offChainFetch }: FetchRpcTransactionInput) {
+  if (!rpcEndpoint) {
+    throw new Error("RPC endpoint is required.");
+  }
+
+  const url = getRequestEndpoint(rpcEndpoint);
+  let response: Response;
+  let raw: unknown;
+
+  try {
+    response = await offChainFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: "receipt",
+        method: "eth_getTransactionReceipt",
+        params: [transactionHash]
+      })
+    });
+    raw = await response.json();
+  } catch (error) {
+    throw Object.assign(new Error(`Network request failed for ${url}: ${getNetworkErrorReason(error)}.`), { cause: error });
+  }
+
+  const responseErrorMessage = getRpcErrorMessage(raw);
+
+  if (!response.ok || responseErrorMessage) {
+    throw new Error(responseErrorMessage ?? "Failed to fetch RPC transaction receipt.");
+  }
+
+  return raw;
+}
+
+export async function fetchRpcTransactionReceipt(input: FetchRpcTransactionInput) {
+  const raw = await fetchRpcTransactionReceiptResponse(input);
+
+  if (!raw || typeof raw !== "object" || !("result" in raw)) {
+    throw new Error("RPC transaction receipt response is missing a result.");
+  }
+
+  return (raw as { result: unknown }).result;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+export async function waitForRpcTransactionReceipt({
+  pollIntervalMs = 2000,
+  timeoutMs = 120000,
+  ...input
+}: WaitForRpcTransactionReceiptInput) {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    const receipt = await fetchRpcTransactionReceipt(input);
+
+    if (receipt) {
+      return receipt;
+    }
+
+    await delay(pollIntervalMs);
+  }
+
+  throw new Error("Timed out waiting for transaction receipt.");
 }

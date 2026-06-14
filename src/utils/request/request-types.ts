@@ -2,7 +2,7 @@ import type { Chain } from "viem";
 import type { NormalizedAbiMethod, ParsedAbi } from "@/types/abi";
 
 export type WalletTransactionClient = {
-  sendTransaction: (request: { account?: `0x${string}`; to: `0x${string}`; data: `0x${string}`; chain?: Chain }) => Promise<`0x${string}`>;
+  sendTransaction: (request: { account?: `0x${string}`; to?: `0x${string}` | null; data: `0x${string}`; chain?: Chain }) => Promise<`0x${string}`>;
   switchChain?: (request: { id: number }) => Promise<void>;
   addChain?: (request: { chain: Chain }) => Promise<void>;
 };

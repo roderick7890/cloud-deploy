@@ -108,6 +108,7 @@ describe("LegacyPage", () => {
     useSettingsStore.setState(useSettingsStore.getInitialState(), true);
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
+      bartenderAddress: "",
       lyquidId: "",
       abi: JSON.stringify(legacyTestAbi),
       buildMethod: "compileProject(bytes)",

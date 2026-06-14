@@ -38,7 +38,7 @@ export function createBrowserWalletTransactionClient(provider: CreateBrowserWall
         params: [
           {
             from: account,
-            to,
+            to: to ?? null,
             data
           }
         ]

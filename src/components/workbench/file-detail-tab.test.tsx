@@ -2,30 +2,47 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
+import { parseLyquidDeploymentArtifact, type ArtifactDescriptorFile } from "@/utils/lyquid-deployment-artifact";
 import { FileDetailTab } from "./file-detail-tab";
 
 const files = [
-  new File(['[package]\nname = "demo"\n'], "Cargo.toml"),
+  new File(['{"name":"demo"}'], "deploy.json"),
   new File(["pub fn main() {}"], "lib.rs")
 ];
 
-Object.defineProperty(files[0], "webkitRelativePath", { value: "demo/Cargo.toml" });
+Object.defineProperty(files[0], "webkitRelativePath", { value: "demo/deploy.json" });
 Object.defineProperty(files[1], "webkitRelativePath", { value: "demo/src/lib.rs" });
 
+const artifactContent = JSON.stringify({
+  name: "demo",
+  deploymentBytecode: "0x6001",
+  imageHash: `0x${"1".repeat(64)}`,
+  repoHint: "registry.local/demo:latest"
+});
+const artifactFiles: ArtifactDescriptorFile[] = [
+  {
+    name: "deploy.json",
+    path: "demo/deploy.json",
+    content: artifactContent,
+    size: artifactContent.length,
+    artifact: parseLyquidDeploymentArtifact(JSON.parse(artifactContent))
+  }
+];
+
 describe("FileDetailTab", () => {
-  it("renders readonly TOML previews", () => {
+  it("renders readonly artifact descriptor previews", () => {
     renderWithProviders(
       <FileDetailTab
-        path="demo/Cargo.toml"
+        path="demo/deploy.json"
         files={files}
-        tomlFiles={[{ name: "Cargo.toml", path: "demo/Cargo.toml", content: '[package]\nname = "demo"\n', size: 24 }]}
+        artifactFiles={artifactFiles}
         onDeploy={vi.fn()}
       />
     );
 
     expect(screen.getByRole("button", { name: "Back" })).toBeInTheDocument();
-    expect(screen.getByText("demo/Cargo.toml")).toBeInTheDocument();
-    expect(screen.getByDisplayValue(/name = "demo"/)).toHaveAttribute("readonly");
+    expect(screen.getByText("demo/deploy.json")).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/deploymentBytecode/)).toHaveAttribute("readonly");
   });
 
   it("calls back when leaving the preview", async () => {
@@ -33,9 +50,9 @@ describe("FileDetailTab", () => {
     const onBack = vi.fn();
     renderWithProviders(
       <FileDetailTab
-        path="demo/Cargo.toml"
+        path="demo/deploy.json"
         files={files}
-        tomlFiles={[{ name: "Cargo.toml", path: "demo/Cargo.toml", content: '[package]\nname = "demo"\n', size: 24 }]}
+        artifactFiles={artifactFiles}
         onBack={onBack}
         onDeploy={vi.fn()}
       />
@@ -46,10 +63,10 @@ describe("FileDetailTab", () => {
     expect(onBack).toHaveBeenCalledOnce();
   });
 
-  it("renders metadata for non-TOML files instead of previewing content", () => {
-    renderWithProviders(<FileDetailTab path="demo/src/lib.rs" files={files} tomlFiles={[]} onDeploy={vi.fn()} />);
+  it("renders metadata for non-artifact files instead of previewing content", () => {
+    renderWithProviders(<FileDetailTab path="demo/src/lib.rs" files={files} artifactFiles={[]} onDeploy={vi.fn()} />);
 
     expect(screen.getByText("demo/src/lib.rs")).toBeInTheDocument();
-    expect(screen.getByText("Only TOML files are previewed.")).toBeInTheDocument();
+    expect(screen.getByText("Only artifact descriptor JSON files are previewed.")).toBeInTheDocument();
   });
 });

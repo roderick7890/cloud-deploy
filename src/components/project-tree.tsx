@@ -11,29 +11,31 @@ type ProjectTreeProps = {
   onSelectTarget?: (path: string) => void;
   showTargetSelector?: boolean;
   fileActionLabel?: "Open" | "Select";
+  targetFileExtension?: string;
+  targetLabel?: string;
 };
 
-function isBuildTargetFile(path: string) {
-  return path.endsWith(".toml");
+function isBuildTargetFile(path: string, extension: string) {
+  return path.endsWith(extension);
 }
 
-function filterBuildTargetTree(nodes: ProjectTreeNode[]): ProjectTreeNode[] {
+function filterBuildTargetTree(nodes: ProjectTreeNode[], extension: string): ProjectTreeNode[] {
   return nodes.flatMap((node) => {
     if (node.type === "file") {
-      return isBuildTargetFile(node.path) ? [node] : [];
+      return isBuildTargetFile(node.path, extension) ? [node] : [];
     }
 
-    const children = filterBuildTargetTree(node.children ?? []);
+    const children = filterBuildTargetTree(node.children ?? [], extension);
     return children.length > 0 ? [{ ...node, children }] : [];
   });
 }
 
-function collectDirectoryPaths(nodes: ProjectTreeNode[]) {
+function collectDirectoryPaths(nodes: ProjectTreeNode[], extension: string) {
   const paths = new Set<string>();
 
   const visit = (node: ProjectTreeNode, forceExpand: boolean) => {
     if (node.type === "file") {
-      return node.path.endsWith(".toml");
+      return node.path.endsWith(extension);
     }
 
     let hasTomlDescendant = false;
@@ -74,7 +76,9 @@ function ProjectTreeNodes({
   onSelectPath,
   onSelectTarget,
   showTargetSelector,
-  fileActionLabel
+  fileActionLabel,
+  targetFileExtension,
+  targetLabel
 }: {
   nodes: ProjectTreeNode[];
   expandedPaths: Set<string>;
@@ -84,6 +88,8 @@ function ProjectTreeNodes({
   onSelectTarget: (path: string) => void;
   showTargetSelector: boolean;
   fileActionLabel: "Open" | "Select";
+  targetFileExtension: string;
+  targetLabel: string;
 }) {
   return (
     <div className="space-y-1 h-full">
@@ -115,6 +121,8 @@ function ProjectTreeNodes({
                     onSelectTarget={onSelectTarget}
                     showTargetSelector={showTargetSelector}
                     fileActionLabel={fileActionLabel}
+                    targetFileExtension={targetFileExtension}
+                    targetLabel={targetLabel}
                   />
                 </div>
               ) : null}
@@ -124,12 +132,12 @@ function ProjectTreeNodes({
 
         return (
           <div key={node.path} className="flex items-center gap-2">
-            {showTargetSelector && node.name.endsWith(".toml") ? (
+            {showTargetSelector && node.name.endsWith(targetFileExtension) ? (
               <input
                 type="radio"
                 name="workbench-target"
                 className="h-4 w-4 accent-primary"
-                aria-label={`Use ${node.path} as deploy target`}
+                aria-label={`Use ${node.path} as ${targetLabel}`}
                 checked={selectedTomlPath === node.path}
                 onChange={() => onSelectTarget(node.path)}
               />
@@ -139,9 +147,14 @@ function ProjectTreeNodes({
               variant="ghost"
               className="h-auto min-w-0 flex-1 justify-start gap-2 px-2 py-1 text-left"
               aria-label={`${fileActionLabel} ${node.path}`}
-              onClick={() => {onSelectPath(node.path); if(showTargetSelector && node.name.endsWith(".toml")){onSelectTarget(node.path)}}}
+              onClick={() => {
+                onSelectPath(node.path);
+                if (showTargetSelector && node.name.endsWith(targetFileExtension)) {
+                  onSelectTarget(node.path);
+                }
+              }}
             >
-              {node.name.endsWith(".toml") ? <FileText className="h-4 w-4" /> : <File className="h-4 w-4" />}
+              {node.name.endsWith(".toml") || node.name.endsWith(".json") ? <FileText className="h-4 w-4" /> : <File className="h-4 w-4" />}
               <span className="truncate">{node.name}</span>
             </Button>
           </div>
@@ -158,11 +171,13 @@ export function ProjectTree({
   onSelectPath,
   onSelectTarget = onSelectPath,
   showTargetSelector = false,
-  fileActionLabel = "Select"
+  fileActionLabel = "Select",
+  targetFileExtension = ".toml",
+  targetLabel = "deploy target"
 }: ProjectTreeProps) {
-  const visibleNodes = useMemo(() => (sourceOnly ? filterBuildTargetTree(nodes) : nodes), [nodes, sourceOnly]);
+  const visibleNodes = useMemo(() => (sourceOnly ? filterBuildTargetTree(nodes, targetFileExtension) : nodes), [nodes, sourceOnly, targetFileExtension]);
   const [expandedPaths, setExpandedPaths] = useState(() =>
-    sourceOnly ? collectAllDirectoryPaths(filterBuildTargetTree(nodes)) : collectDirectoryPaths(nodes)
+    sourceOnly ? collectAllDirectoryPaths(filterBuildTargetTree(nodes, targetFileExtension)) : collectDirectoryPaths(nodes, targetFileExtension)
   );
 
   const handleTogglePath = (path: string) => {
@@ -188,6 +203,8 @@ export function ProjectTree({
         onSelectTarget={onSelectTarget}
         showTargetSelector={showTargetSelector}
         fileActionLabel={fileActionLabel}
+        targetFileExtension={targetFileExtension}
+        targetLabel={targetLabel}
       />
     </div>
   );

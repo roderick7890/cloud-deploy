@@ -10,6 +10,8 @@ export type DeployHistoryStatus = "submitted" | "success" | "failed";
 
 export type WorkbenchEnv = {
   rpcEndpoint: string;
+  bartenderAddress?: string;
+  artifactName?: string;
   lyquidId?: string;
   walletAddress?: string;
   chainId?: number;

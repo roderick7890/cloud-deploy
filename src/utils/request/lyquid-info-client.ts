@@ -2,10 +2,17 @@ import { getAddress, isAddress, type Address } from "viem";
 import { getRequestEndpoint } from "./endpoint-utils";
 
 const getLyquidInfoPath = "/lyquor.lyquid.v1.LyquidService/GetLyquidInfo";
+const getLyquidByAddressPath = "/lyquor.lyquid.v1.LyquidService/GetLyquidByAddress";
 
 type FetchLyquidContractAddressInput = {
   rpcEndpoint: string;
   lyquidId: string;
+  offChainFetch: typeof fetch;
+};
+
+type FetchLyquidIdByAddressInput = {
+  rpcEndpoint: string;
+  contractAddress: string;
   offChainFetch: typeof fetch;
 };
 
@@ -53,10 +60,10 @@ function getNetworkErrorReason(error: unknown) {
   return "Unknown network error";
 }
 
-function getLyquidInfoEndpoint(rpcEndpoint: string) {
+function getLyquidServiceEndpoint(rpcEndpoint: string, path: string) {
   try {
     const url = new URL(rpcEndpoint);
-    url.pathname = getLyquidInfoPath;
+    url.pathname = path;
     url.search = "";
     url.hash = "";
     return getRequestEndpoint(url.toString());
@@ -79,6 +86,20 @@ function getContractAddressFromInfo(raw: unknown) {
   return typeof value === "string" ? value : null;
 }
 
+function getLyquidIdFromAddressResponse(raw: unknown) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const response = raw as {
+    lyquidId?: { value?: unknown };
+    lyquid_id?: { value?: unknown };
+  };
+  const value = response.lyquidId?.value ?? response.lyquid_id?.value;
+
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
 export async function fetchLyquidContractAddress({
   rpcEndpoint,
   lyquidId,
@@ -94,7 +115,7 @@ export async function fetchLyquidContractAddress({
     return getAddress(trimmedLyquidId);
   }
 
-  const url = getLyquidInfoEndpoint(rpcEndpoint);
+  const url = getLyquidServiceEndpoint(rpcEndpoint, getLyquidInfoPath);
   let response: Response;
   let raw: unknown;
 
@@ -137,4 +158,48 @@ export async function fetchLyquidContractAddress({
   }
 
   return getAddress(contractAddress);
+}
+
+export async function fetchLyquidIdByAddress({
+  rpcEndpoint,
+  contractAddress,
+  offChainFetch
+}: FetchLyquidIdByAddressInput): Promise<string | null> {
+  if (!isAddress(contractAddress)) {
+    throw new Error("Contract address is invalid.");
+  }
+
+  const url = getLyquidServiceEndpoint(rpcEndpoint, getLyquidByAddressPath);
+  let response: Response;
+  let raw: unknown;
+
+  try {
+    response = await offChainFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        address: {
+          value: getAddress(contractAddress)
+        }
+      })
+    });
+    raw = await response.json();
+  } catch (error) {
+    throw Object.assign(
+      new Error(
+        `Network request failed for ${url}: ${getNetworkErrorReason(error)}. Check CORS, the target host and port, and whether the RPC node is running.`
+      ),
+      { cause: error }
+    );
+  }
+
+  const responseMessage = getResponseMessage(raw);
+
+  if (!response.ok || responseMessage) {
+    throw new Error(responseMessage ?? "Failed to resolve Lyquid ID by address.");
+  }
+
+  return getLyquidIdFromAddressResponse(raw);
 }

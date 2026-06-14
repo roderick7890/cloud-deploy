@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { UploadedProject } from "@/types/deploy";
-import { analyzeProjectFiles } from "@/utils/file-utils";
+import type { UploadedArtifactBundle } from "@/utils/lyquid-deployment-artifact";
+import { analyzeArtifactFiles } from "@/utils/lyquid-deployment-artifact";
 import { cn } from "@/lib/utils";
 
 type ResourceExplorerProps = {
-  project: UploadedProject | null;
-  selectedTomlPath: string;
-  onProjectChange: (project: UploadedProject) => void;
+  project: UploadedArtifactBundle | null;
+  selectedArtifactPath: string;
+  onProjectChange: (project: UploadedArtifactBundle) => void;
   onSelectTarget: (path: string) => void;
   onOpenFile: (path: string) => void;
 };
@@ -51,17 +51,17 @@ function FolderInput({
   );
 }
 
-export function ResourceExplorer({ project, selectedTomlPath, onProjectChange, onSelectTarget, onOpenFile }: ResourceExplorerProps) {
-  const [tomlOnly, setTomlOnly] = useState(false);
+export function ResourceExplorer({ project, selectedArtifactPath, onProjectChange, onSelectTarget, onOpenFile }: ResourceExplorerProps) {
+  const [artifactOnly, setArtifactOnly] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleFiles = async (files: File[]) => {
     try {
-      const nextProject = await analyzeProjectFiles(files);
-      setTomlOnly(false);
+      const nextProject = await analyzeArtifactFiles(files);
+      setArtifactOnly(false);
       onProjectChange(nextProject);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to parse project files.");
+      setErrorMessage(error instanceof Error ? error.message : "Failed to parse artifact files.");
     }
   };
 
@@ -84,44 +84,46 @@ export function ResourceExplorer({ project, selectedTomlPath, onProjectChange, o
                     <ArrowLeftRight className="size-4" />
                   </FolderInput>
                   <Button
-                    className={cn("w-fit h-fit p-1 !bg-transparent hover:text-accent", tomlOnly ? "text-accent" : "")}
+                    className={cn("w-fit h-fit p-1 !bg-transparent hover:text-accent", artifactOnly ? "text-accent" : "")}
                     type="button"
                     variant="ghost"
                     size="icon"
-                    aria-label="Toml only"
-                    onClick={() => setTomlOnly((value) => !value)}
+                    aria-label="Artifact JSON only"
+                    onClick={() => setArtifactOnly((value) => !value)}
                   >
                     <Filter className="size-2.5" />
                   </Button>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes, {project.tomlFiles.length} TOML included
+                {project.metadata.fileCount} file(s), {project.metadata.totalSize} bytes, {project.artifactFiles.length} artifact descriptor(s)
               </p>
             </div>
           </div>
           <div className="h-full flex-1 overflow-auto rounded-md">
             <ProjectTree
-              key={`${project.rootName}:${project.metadata.fileCount}:${project.metadata.totalSize}:${tomlOnly}`}
+              key={`${project.rootName}:${project.metadata.fileCount}:${project.metadata.totalSize}:${artifactOnly}`}
               nodes={project.tree}
-              selectedTomlPath={selectedTomlPath}
-              sourceOnly={tomlOnly}
+              selectedTomlPath={selectedArtifactPath}
+              sourceOnly={artifactOnly}
               onSelectPath={onOpenFile}
               onSelectTarget={onSelectTarget}
               showTargetSelector
               fileActionLabel="Open"
+              targetFileExtension=".json"
+              targetLabel="deployment artifact"
             />
           </div>
         </>
       ) : (
         <FolderInput
           id="workbench-project-folder"
-          label="Drop a folder here or choose one."
+          label="Drop a build artifact folder here or choose one."
           onFiles={(files) => void handleFiles(files)}
           className="flex min-h-0 flex-1 cursor-pointer flex-col items-center justify-center gap-3 rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground hover:border-primary hover:text-foreground"
         >
           <FolderUp className="h-8 w-8" />
-          <span>Drop a folder here or choose one.</span>
+          <span>Drop a build artifact folder here or choose one.</span>
         </FolderInput>
       )}
 

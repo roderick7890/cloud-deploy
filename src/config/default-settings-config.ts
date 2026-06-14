@@ -1,5 +1,6 @@
 export type DefaultSettings = {
   rpcEndpoint: string;
+  bartenderAddress: string;
   lyquidId: string;
   abi: string;
   buildMethod: string;
@@ -8,6 +9,7 @@ export type DefaultSettings = {
 
 export const defaultSettings: DefaultSettings = {
   rpcEndpoint: "",
+  bartenderAddress: "",
   lyquidId: "",
   abi: "[]",
   buildMethod: "",

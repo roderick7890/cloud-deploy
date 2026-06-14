@@ -3,8 +3,8 @@ import type { WorkbenchLayout } from "@/types/workbench";
 import { clampRatio } from "@/utils/workbench-layout-utils";
 import { ResizeHandle } from "./resizable-panels";
 
-const enableActionsPane = false;
-const enableResourcePane = false;
+const enableActionsPane = true;
+const enableResourcePane = true;
 
 type DeployWorkbenchProps = {
   layout: WorkbenchLayout;
@@ -23,8 +23,6 @@ export function DeployWorkbench({
   tabsPane,
   actionsPane,
 }: DeployWorkbenchProps) {
-  void historyPane;
-
   return (
     <div className="flex min-h-0 min-w-0 max-w-full flex-1 overflow-hidden w-full">
       <section

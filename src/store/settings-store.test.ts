@@ -11,6 +11,7 @@ describe("settings-store", () => {
   it("persists only settings", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
+      bartenderAddress: "0x0000000000000000000000000000000000000001",
       lyquidId: "lyquid-1",
       abi: lyquidTestAbi,
       buildMethod: "compileProject(bytes)",
@@ -19,6 +20,7 @@ describe("settings-store", () => {
 
     const raw = localStorage.getItem("cloud-deploy-settings");
     expect(raw).toContain("rpcEndpoint");
+    expect(raw).toContain("bartenderAddress");
     expect(raw).not.toContain("buildResult");
     expect(raw).not.toContain("uploadedProject");
   });
@@ -26,6 +28,7 @@ describe("settings-store", () => {
   it("reports missing selected methods after ABI changes", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
+      bartenderAddress: "",
       lyquidId: "",
       abi: lyquidTestAbi,
       buildMethod: "compileProject(bytes)",
@@ -34,6 +37,7 @@ describe("settings-store", () => {
 
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
+      bartenderAddress: "",
       lyquidId: "",
       abi: "[]",
       buildMethod: "compileProject(bytes)",
@@ -49,6 +53,7 @@ describe("settings-store", () => {
   it("derives method options from current ABI", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
+      bartenderAddress: "",
       lyquidId: "",
       abi: lyquidTestAbi,
       buildMethod: "",

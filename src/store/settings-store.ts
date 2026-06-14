@@ -27,6 +27,7 @@ export const useSettingsStore = create<SettingsState>()(
       version: settingsVersion,
       partialize: (state) => ({
         rpcEndpoint: state.rpcEndpoint,
+        bartenderAddress: state.bartenderAddress,
         lyquidId: state.lyquidId,
         abi: state.abi,
         buildMethod: state.buildMethod,
@@ -36,6 +37,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (state) {
           state.saveSettings({
             rpcEndpoint: state.rpcEndpoint,
+            bartenderAddress: state.bartenderAddress ?? "",
             lyquidId: state.lyquidId,
             abi: state.abi,
             buildMethod: state.buildMethod,
