@@ -24,7 +24,7 @@ describe("lyquid-deployment-sender", () => {
       const url = String(input);
       const body = init?.body ? JSON.parse(String(init.body)) : {};
 
-      if (url.includes("10087%2Fapi")) {
+      if (url === "http://127.0.0.1:10087/api") {
         if (body.method === "eth_chainId") {
           return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: "chain-id", result: "0x7a69" }));
         }

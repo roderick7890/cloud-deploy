@@ -8,7 +8,7 @@ describe("rpc-transaction-client", () => {
       json: () =>
         Promise.resolve({
           jsonrpc: "2.0",
-          id: "transaction",
+          id: 1,
           result: {
             hash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
             from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
@@ -30,12 +30,12 @@ describe("rpc-transaction-client", () => {
     });
 
     expect(offChainFetch).toHaveBeenCalledWith(
-      "/__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Fapi",
+      "http://127.0.0.1:10087/api",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
           jsonrpc: "2.0",
-          id: "transaction",
+          id: 1,
           method: "eth_getTransactionByHash",
           params: ["0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318"]
         })
@@ -46,7 +46,7 @@ describe("rpc-transaction-client", () => {
   it("can return the raw transaction RPC response for debug surfaces", async () => {
     const rawResponse = {
       jsonrpc: "2.0",
-      id: "transaction",
+      id: 1,
       result: {
         hash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
         input: "0xabcdef"

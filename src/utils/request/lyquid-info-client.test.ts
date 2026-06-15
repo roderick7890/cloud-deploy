@@ -30,7 +30,7 @@ describe("fetchLyquidContractAddress", () => {
     ).resolves.toBe("0x610178dA211FEF7D417bC0e6FeD39F05609AD788");
 
     expect(offChainFetch).toHaveBeenCalledWith(
-      expect.stringContaining(encodeURIComponent("http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo")),
+      "http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({
@@ -63,9 +63,7 @@ describe("fetchLyquidContractAddress", () => {
         lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
         offChainFetch
       })
-    ).rejects.toThrow(
-      "Network request failed for /__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Flyquor.lyquid.v1.LyquidService%2FGetLyquidInfo: Failed to fetch."
-    );
+    ).rejects.toThrow("Network request failed for GetLyquidInfo: Failed to fetch.");
   });
 });
 
@@ -95,7 +93,7 @@ describe("fetchNetworkBartenderInfo", () => {
     });
 
     expect(offChainFetch).toHaveBeenCalledWith(
-      expect.stringContaining(encodeURIComponent("http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo")),
+      "http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({})
@@ -123,7 +121,7 @@ describe("fetchLyquidIdByAddress", () => {
     ).resolves.toBe("Lyquid-new");
 
     expect(offChainFetch).toHaveBeenCalledWith(
-      expect.stringContaining(encodeURIComponent("http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidByAddress")),
+      "http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidByAddress",
       expect.objectContaining({
         method: "POST",
         body: JSON.stringify({

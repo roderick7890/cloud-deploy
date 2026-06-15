@@ -3,9 +3,15 @@ import { parseAbiSource } from "@/utils/abi/abi-utils";
 import { sendOffChainMethod } from "./off-chain-sender";
 import type { RequestSenderContext } from "./request-types";
 
-const lyquidInfoProxyUrl =
-  "/__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Flyquor.lyquid.v1.LyquidService%2FGetLyquidInfo";
-const rpcProxyUrl = "/__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Fapi";
+const lyquidInfoUrl = "http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo";
+const rpcUrl = "http://127.0.0.1:10087/api";
+
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" }
+  });
+}
 
 describe("off-chain-sender", () => {
   it("resolves a Lyquid ID to its latest contract address before eth_call", async () => {
@@ -33,22 +39,17 @@ describe("off-chain-sender", () => {
         const url = String(input);
 
         if (url.includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  lyquidId: { value: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5" },
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(
+            jsonResponse({
+              lyquidInfo: {
+                lyquidId: { value: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5" },
+                contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
+              }
+            })
+          );
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ jsonrpc: "2.0", id: "1", result: "0x" })
-        } as Response);
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
     };
 
@@ -61,7 +62,7 @@ describe("off-chain-sender", () => {
     const lyquidInfoBody = JSON.parse(String(calls[0][1]?.body));
     const ethCallBody = JSON.parse(String(calls[1][1]?.body));
 
-    expect(calls[0][0]).toBe(lyquidInfoProxyUrl);
+    expect(calls[0][0]).toBe(lyquidInfoUrl);
     expect(lyquidInfoBody).toEqual({
       lyquidId: { value: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5" }
     });
@@ -90,29 +91,10 @@ describe("off-chain-sender", () => {
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: (input) => {
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              jsonrpc: "2.0",
-              id: null,
-              error: {
-                code: -32700,
-                message: "Parse error"
-              }
-            })
-        } as Response);
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, error: { code: -32700, message: "Parse error" } }));
       }
     };
 
@@ -150,21 +132,10 @@ describe("off-chain-sender", () => {
       offChainFetch: (input, init) => {
         calls.push([input, init]);
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ jsonrpc: "2.0", id: "1", result: "0x" })
-        } as Response);
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
     };
 
@@ -177,7 +148,7 @@ describe("off-chain-sender", () => {
     const [url, init] = calls[1];
     const body = JSON.parse(String(init?.body));
 
-    expect(url).toBe(rpcProxyUrl);
+    expect(url).toBe(rpcUrl);
     expect(body).toMatchObject({
       jsonrpc: "2.0",
       method: "eth_call",
@@ -190,10 +161,10 @@ describe("off-chain-sender", () => {
       ]
     });
     expect(body.params[0].data).toMatch(/^0x73e1b835/);
-    expect(typeof body.id).toBe("string");
+    expect(body.id).toBe(1);
   });
 
-  it("routes any local RPC port through the same dev proxy endpoint", async () => {
+  it("routes any local RPC port through SDK direct endpoints", async () => {
     const parsedAbi = parseAbiSource(
       JSON.stringify([
         {
@@ -216,21 +187,10 @@ describe("off-chain-sender", () => {
       offChainFetch: (input, init) => {
         calls.push([input, init]);
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ jsonrpc: "2.0", id: "1", result: "0x" })
-        } as Response);
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
     };
 
@@ -241,8 +201,8 @@ describe("off-chain-sender", () => {
     });
 
     expect(calls.map(([url]) => String(url))).toEqual([
-      "/__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A11087%2Flyquor.lyquid.v1.LyquidService%2FGetLyquidInfo",
-      "/__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A11087%2Fapi"
+      "http://127.0.0.1:11087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo",
+      "http://127.0.0.1:11087/api"
     ]);
   });
 
@@ -272,21 +232,10 @@ describe("off-chain-sender", () => {
         }
 
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ ok: true })
-        } as Response);
+        return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       } as typeof fetch
     };
 
@@ -296,9 +245,7 @@ describe("off-chain-sender", () => {
         args: ["0x1234", "0x", "constructor-demo-lyquid"],
         context
       })
-    ).resolves.toEqual({
-      ok: true
-    });
+    ).resolves.toEqual({ jsonrpc: "2.0", id: 1, result: "0x" });
   });
 
   it("includes the failed request URL and network reason when fetch rejects", async () => {
@@ -330,7 +277,7 @@ describe("off-chain-sender", () => {
         context
       })
     ).rejects.toThrow(
-      "Network request failed for /__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Flyquor.lyquid.v1.LyquidService%2FGetLyquidInfo: Failed to fetch. Check CORS, the target host and port, and whether the RPC node is running."
+      "Network request failed for GetLyquidInfo: Failed to fetch. Check CORS, the target host and port, and whether the RPC node is running."
     );
   });
 });

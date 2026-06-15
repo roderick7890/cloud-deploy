@@ -3,6 +3,13 @@ import { parseAbiSource } from "@/utils/abi/abi-utils";
 import { sendOnChainMethod } from "./on-chain-sender";
 import type { RequestSenderContext } from "./request-types";
 
+function jsonResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "content-type": "application/json" }
+  });
+}
+
 describe("on-chain-sender", () => {
   it("resolves the deployer Lyquid contract and submits a wallet transaction", async () => {
     const parsedAbi = parseAbiSource(
@@ -33,39 +40,29 @@ describe("on-chain-sender", () => {
       walletClient: { sendTransaction, switchChain },
       publicClient: { waitForTransactionReceipt },
       offChainFetch: (input, init) => {
-        if (String(input).includes("10087%2Fapi")) {
+        if (String(input) === "http://127.0.0.1:10087/api") {
           const body = JSON.parse(String(init?.body));
 
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve(
-                body.method === "eth_chainId"
-                  ? { jsonrpc: "2.0", id: "chain-id", result: "0x7a69" }
-                  : {
-                      jsonrpc: "2.0",
-                      id: "transaction",
-                      result: {
-                        hash: "0xabc123",
-                        from: "0x1111111111111111111111111111111111111111",
-                        to: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-                        input: "0xfeed"
-                      }
+          return Promise.resolve(
+            jsonResponse(
+              body.method === "eth_chainId"
+                ? { jsonrpc: "2.0", id: 1, result: "0x7a69" }
+                : {
+                    jsonrpc: "2.0",
+                    id: 1,
+                    result: {
+                      hash: "0xabc123",
+                      from: "0x1111111111111111111111111111111111111111",
+                      to: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+                      input: "0xfeed"
                     }
-              )
-          } as Response);
+                  }
+            )
+          );
         }
 
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () =>
-              Promise.resolve({
-                lyquidInfo: {
-                  contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" }
-                }
-              })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
         throw new Error(`Unexpected request ${String(input)}`);
@@ -126,18 +123,12 @@ describe("on-chain-sender", () => {
       accountAddress: "0x1111111111111111111111111111111111111111",
       walletClient: { sendTransaction, switchChain, addChain },
       offChainFetch: (input) => {
-        if (String(input).includes("10087%2Fapi")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ jsonrpc: "2.0", id: "chain-id", result: "0x7a69" })
-          } as Response);
+        if (String(input) === "http://127.0.0.1:10087/api") {
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x7a69" }));
         }
 
         if (String(input).includes("GetLyquidInfo")) {
-          return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } })
-          } as Response);
+          return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: "0x5FbDB2315678afecb367f032d93F642f64180aa3" } } }));
         }
 
         throw new Error(`Unexpected request ${String(input)}`);
