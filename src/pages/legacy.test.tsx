@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSettingsStore } from "@/store/settings-store";
@@ -10,14 +10,13 @@ const accountAddressMock = vi.hoisted(() => ({ value: undefined as `0x${string}`
 const connectMock = vi.hoisted(() => vi.fn());
 
 const contractAbi = [{ type: "function", name: "increment", inputs: [] }];
-const artifactDescriptor = JSON.stringify({
-  name: "demo",
-  deploymentBytecode: "0x6001",
-  imageHash: `0x${"1".repeat(64)}`,
-  repoHint: "registry.local/demo:latest",
-  abiStr: "string greeting",
-  contractAbi
-});
+const manifest = {
+  config: { digest: `sha256:${"2".repeat(64)}` },
+  layers: [
+    { annotations: { assetType: "lyquid" }, digest: `sha256:${"3".repeat(64)}` },
+    { annotations: { assetType: "evm-deployment-bytecode" }, digest: `sha256:${"4".repeat(64)}` }
+  ]
+};
 
 vi.mock("wagmi", () => ({
   useAccount: () => ({ address: accountAddressMock.value }),
@@ -33,35 +32,47 @@ vi.mock("@/utils/request/lyquid-deployment-sender", () => ({
   sendLyquidDeployment: sendLyquidDeploymentMock
 }));
 
-function folderFile(contents: string, name: string, path: string) {
-  const file = new File([contents], name);
-  Object.defineProperty(file, "webkitRelativePath", {
-    value: path
-  });
-  return file;
-}
-
 async function uploadAndSelectArtifact() {
   const user = userEvent.setup();
 
   renderWithProviders(<LegacyPage />);
-  await user.upload(screen.getByLabelText("Build artifact folder"), [
-    folderFile(artifactDescriptor, "deploy.json", "demo/deploy.json"),
-    folderFile("notes", "README.md", "demo/README.md")
-  ]);
-  await user.click(await screen.findByRole("button", { name: "Select demo/deploy.json" }));
+  fireEvent.change(screen.getByLabelText("Repository"), { target: { value: "lyquids/local" } });
+  fireEvent.change(screen.getByLabelText("Reference"), { target: { value: "latest" } });
+  await user.click(screen.getByRole("button", { name: "Load Artifact" }));
+  await screen.findByDisplayValue(/evm-deployment-bytecode/);
 
   return user;
 }
 
 describe("LegacyPage", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     sendLyquidDeploymentMock.mockReset();
     connectMock.mockReset();
     accountAddressMock.value = undefined;
     Object.defineProperty(window, "ethereum", {
       configurable: true,
       value: { request: vi.fn().mockResolvedValue("0x0") }
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url.endsWith("/v2/lyquids/local/manifests/latest")) {
+        return new Response(JSON.stringify(manifest), {
+          status: 200,
+          headers: { "docker-content-digest": `sha256:${"1".repeat(64)}` }
+        });
+      }
+
+      if (url.endsWith(`/v2/lyquids/local/blobs/sha256:${"2".repeat(64)}`)) {
+        return new Response(JSON.stringify({ name: "demo", abi_str: "string greeting", os_version: "0.0", contractAbi }), { status: 200 });
+      }
+
+      if (url.endsWith(`/v2/lyquids/local/blobs/sha256:${"4".repeat(64)}`)) {
+        return new Response(new Uint8Array([0x60, 0x01]), { status: 200 });
+      }
+
+      throw new Error(`Unexpected fetch ${url}`);
     });
     useSettingsStore.setState(useSettingsStore.getInitialState(), true);
     useSettingsStore.getState().saveSettings({
@@ -74,18 +85,20 @@ describe("LegacyPage", () => {
     });
   });
 
-  it("uses the legacy layout with artifact upload and no build/source-only actions", async () => {
-    const user = await uploadAndSelectArtifact();
+  it("uses the legacy layout with OCI artifact loading and no build/source-only actions", async () => {
+    await uploadAndSelectArtifact();
 
-    expect(screen.getByLabelText("Build artifact folder")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Artifact JSON only" })).toBeInTheDocument();
+    expect(screen.getByLabelText("RPC Endpoint")).toHaveValue("http://localhost:8545");
+    expect(screen.getByLabelText("Repository")).toHaveValue("lyquids/local");
+    expect(screen.getByLabelText("Reference")).toHaveValue("latest");
+    expect((screen.getByLabelText("Manifest JSON") as HTMLTextAreaElement).value).toContain("evm-deployment-bytecode");
+    expect((screen.getByLabelText("Metadata JSON") as HTMLTextAreaElement).value).toContain("abi_str");
+    expect(screen.getByLabelText("Deployment Bytecode")).toHaveValue("0x6001");
+    expect(screen.queryByRole("button", { name: "Artifact JSON only" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Source only" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Build" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deploy" })).toBeEnabled();
     expect(screen.getByLabelText("greeting")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Artifact JSON only" }));
-    expect(screen.queryByText("README.md")).not.toBeInTheDocument();
   });
 
   it("prepares deployment data before asking a disconnected wallet to connect", async () => {

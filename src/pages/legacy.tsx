@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { injected } from "wagmi/connectors";
+import { OciArtifactStep } from "@/components/oci-artifact-step";
 import { ReviewStep } from "@/components/review-step";
 import { SettingsDialog } from "@/components/shared/settings-dialog";
 import { Button } from "@/components/ui/button";
-import { ArtifactUploadStep } from "@/components/upload-step";
 import { AppShell } from "@/layout/app-shell";
 import { useSettingsStore } from "@/store/settings-store";
 import type { BuildResult, DeployResult, DeployStepId } from "@/types/deploy";
 import { downloadJson } from "@/utils/download-utils";
 import { hashPayload } from "@/utils/hash-utils";
-import { buildLyquidDeploymentTransaction, type UploadedArtifactBundle } from "@/utils/lyquid-deployment-artifact";
+import { buildLyquidDeploymentTransaction, type LyquidDeploymentArtifact } from "@/utils/lyquid-deployment-artifact";
+import { fetchLyquidDeploymentArtifactFromOci } from "@/utils/oci-deployment-artifact";
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
 import { sendLyquidDeployment } from "@/utils/request/lyquid-deployment-sender";
 
@@ -27,10 +28,15 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function LegacyPage() {
+  const settings = useSettingsStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [isLoadingArtifact, setIsLoadingArtifact] = useState(false);
   const [currentStep, setCurrentStep] = useState<DeployStepId>("upload");
-  const [uploadedProject, setUploadedProject] = useState<UploadedArtifactBundle | null>(null);
+  const [rpcEndpoint, setRpcEndpoint] = useState(settings.rpcEndpoint);
+  const [repository, setRepository] = useState("lyquids/local");
+  const [reference, setReference] = useState("latest");
+  const [selectedArtifact, setSelectedArtifact] = useState<LyquidDeploymentArtifact | null>(null);
   const [constructorValues, setConstructorValues] = useState<Record<string, string>>({});
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [deployResult, setDeployResult] = useState<DeployResult | null>(null);
@@ -38,26 +44,15 @@ export default function LegacyPage() {
   const account = useAccount();
   const { connect } = useConnect();
   const { disconnect } = useDisconnect();
-  const settings = useSettingsStore();
 
   const walletLabel = account.address ? `${account.address.slice(0, 6)}...${account.address.slice(-4)}` : "Connect Wallet";
-  const selectedArtifactFile = uploadedProject?.artifactFiles.find((file) => file.path === uploadedProject.selectedArtifactPath);
-  const selectedArtifact = selectedArtifactFile?.artifact;
-  const canRunAction = Boolean(selectedArtifact) && !isDeploying;
+  const canRunAction = Boolean(selectedArtifact) && !isDeploying && !isLoadingArtifact;
   const connectWallet = () => connect({ connector: injected() });
   const copyWalletAddress = () => (account.address ? navigator.clipboard.writeText(account.address) : undefined);
 
-  const handleProjectUpload = (project: UploadedArtifactBundle) => {
-    setUploadedProject(project);
-    setBuildResult(null);
-    setDeployResult(null);
-    setCurrentError(null);
-    setConstructorValues({});
-  };
-
   const prepareDeploymentData = (): BuildResult | null => {
-    if (!selectedArtifact || !uploadedProject?.selectedArtifactPath) {
-      setCurrentError("Upload a build artifact folder and select an artifact descriptor before deploy.");
+    if (!selectedArtifact) {
+      setCurrentError("Load a Lyquid artifact from node /v2 before deploy.");
       return null;
     }
 
@@ -77,7 +72,8 @@ export default function LegacyPage() {
         imageHash: selectedArtifact.imageHash,
         repoHint: selectedArtifact.repoHint,
         abiStr: selectedArtifact.abiStr,
-        osVersion: selectedArtifact.osVersion
+        osVersion: selectedArtifact.osVersion,
+        raw: selectedArtifact.raw
       },
       transaction: transaction.submittedTransaction,
       parameters: transaction.parameters
@@ -115,7 +111,7 @@ export default function LegacyPage() {
         bartenderAddress: settings.bartenderAddress,
         constructorValues,
         context: {
-          rpcEndpoint: settings.rpcEndpoint,
+          rpcEndpoint,
           accountAddress: account.address,
           walletClient: createBrowserWalletTransactionClient((window as BrowserWindowWithWallet).ethereum),
           offChainFetch: (input, init) => fetch(input, init)
@@ -137,6 +133,30 @@ export default function LegacyPage() {
       setCurrentError(getErrorMessage(error, "Deploy failed."));
     } finally {
       setIsDeploying(false);
+    }
+  };
+
+  const handleLoadArtifact = async () => {
+    setCurrentError(null);
+    setBuildResult(null);
+    setDeployResult(null);
+
+    try {
+      setIsLoadingArtifact(true);
+      const artifact = await fetchLyquidDeploymentArtifactFromOci({
+        rpcEndpoint,
+        repository,
+        reference,
+        fetchImpl: (input, init) => fetch(input, init)
+      });
+
+      setSelectedArtifact(artifact);
+      setConstructorValues({});
+    } catch (error) {
+      setSelectedArtifact(null);
+      setCurrentError(getErrorMessage(error, "Load artifact failed."));
+    } finally {
+      setIsLoadingArtifact(false);
     }
   };
 
@@ -178,9 +198,31 @@ export default function LegacyPage() {
         ) : (
           <div className="flex min-h-0 flex-1 flex-col overflow-auto p-6">
             {currentError ? <p className="mb-4 rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{currentError}</p> : null}
-            <ArtifactUploadStep
-              project={uploadedProject}
-              onUpload={handleProjectUpload}
+            <OciArtifactStep
+              rpcEndpoint={rpcEndpoint}
+              repository={repository}
+              reference={reference}
+              artifact={selectedArtifact}
+              isLoading={isLoadingArtifact}
+              onRpcEndpointChange={(value) => {
+                setRpcEndpoint(value);
+                setSelectedArtifact(null);
+                setBuildResult(null);
+                setDeployResult(null);
+              }}
+              onRepositoryChange={(value) => {
+                setRepository(value);
+                setSelectedArtifact(null);
+                setBuildResult(null);
+                setDeployResult(null);
+              }}
+              onReferenceChange={(value) => {
+                setReference(value);
+                setSelectedArtifact(null);
+                setBuildResult(null);
+                setDeployResult(null);
+              }}
+              onLoad={handleLoadArtifact}
               constructorValues={constructorValues}
               onConstructorValuesChange={(values) => {
                 setConstructorValues(values);
