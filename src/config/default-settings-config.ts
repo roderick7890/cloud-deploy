@@ -9,7 +9,7 @@ export type DefaultSettings = {
 
 export const defaultSettings: DefaultSettings = {
   rpcEndpoint: "",
-  bartenderAddress: "0x0000000000000000000000000000000000000001",
+  bartenderAddress: "",
   lyquidId: "",
   abi: "[]",
   buildMethod: "",
