@@ -1,6 +1,5 @@
 import { encodeFunctionData } from "viem";
 import { fetchLyquidContractAddress } from "./lyquid-info-client";
-import { requestSdkRpc } from "./sdk-transport-client";
 import type { MethodSenderInput } from "./request-types";
 
 export async function sendOffChainMethod({ method, args, context }: MethodSenderInput) {
@@ -12,11 +11,9 @@ export async function sendOffChainMethod({ method, args, context }: MethodSender
     throw new Error("Lyquid ID is required.");
   }
 
-  const { offChainFetch } = context;
   const contractAddress = await fetchLyquidContractAddress({
-    rpcEndpoint: context.rpcEndpoint,
-    lyquidId: context.lyquidId,
-    offChainFetch
+    serviceTransport: context.serviceTransport,
+    lyquidId: context.lyquidId
   });
   if (!contractAddress) {
     throw new Error("Lyquid ID is not deployed or not visible to this node.");
@@ -31,9 +28,7 @@ export async function sendOffChainMethod({ method, args, context }: MethodSender
     to: contractAddress,
     data
   };
-  const result = await requestSdkRpc({
-    rpcEndpoint: context.rpcEndpoint,
-    fetchImpl: offChainFetch,
+  const result = await context.rpcTransport.requestRpc({
     method: "eth_call",
     params: [call, "latest"]
   });

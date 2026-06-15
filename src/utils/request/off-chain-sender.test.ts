@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parseAbiSource } from "@/utils/abi/abi-utils";
 import { sendOffChainMethod } from "./off-chain-sender";
+import { createRequestSenderContext } from "./sdk-transport-client";
 import type { RequestSenderContext } from "./request-types";
 
 const lyquidInfoUrl = "http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo";
@@ -31,7 +32,7 @@ describe("off-chain-sender", () => {
       ])
     );
     const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
-    const context: RequestSenderContext = {
+    const context = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: (input, init) => {
@@ -51,7 +52,7 @@ describe("off-chain-sender", () => {
 
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
-    };
+    });
 
     await sendOffChainMethod({
       method: parsedAbi.methods[0],
@@ -86,7 +87,7 @@ describe("off-chain-sender", () => {
       ])
     );
     const method = parsedAbi.methods[0];
-    const context: RequestSenderContext = {
+    const context = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: (input) => {
@@ -96,7 +97,7 @@ describe("off-chain-sender", () => {
 
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, error: { code: -32700, message: "Parse error" } }));
       }
-    };
+    });
 
     await expect(
       sendOffChainMethod({
@@ -125,7 +126,7 @@ describe("off-chain-sender", () => {
     );
     const method = parsedAbi.methods[0];
     const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
-    const context: RequestSenderContext = {
+    const context = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       accountAddress: "0x1111111111111111111111111111111111111111",
@@ -137,7 +138,7 @@ describe("off-chain-sender", () => {
 
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
-    };
+    });
 
     await sendOffChainMethod({
       method,
@@ -181,7 +182,7 @@ describe("off-chain-sender", () => {
       ])
     );
     const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
-    const context: RequestSenderContext = {
+    const context = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:11087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: (input, init) => {
@@ -192,7 +193,7 @@ describe("off-chain-sender", () => {
 
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       }
-    };
+    });
 
     await sendOffChainMethod({
       method: parsedAbi.methods[0],
@@ -223,7 +224,7 @@ describe("off-chain-sender", () => {
       ])
     );
     const method = parsedAbi.methods[0];
-    const context: RequestSenderContext = {
+    const context: RequestSenderContext = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: function (this: unknown, input) {
@@ -237,7 +238,7 @@ describe("off-chain-sender", () => {
 
         return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: 1, result: "0x" }));
       } as typeof fetch
-    };
+    });
 
     await expect(
       sendOffChainMethod({
@@ -264,11 +265,11 @@ describe("off-chain-sender", () => {
         }
       ])
     );
-    const context: RequestSenderContext = {
+    const context = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       offChainFetch: () => Promise.reject(new TypeError("Failed to fetch"))
-    };
+    });
 
     await expect(
       sendOffChainMethod({

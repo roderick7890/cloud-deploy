@@ -2,18 +2,19 @@ import { describe, expect, it, vi } from "vitest";
 import { lyquidTestAbi } from "@/test/test-abi";
 import { parseAbiSource } from "@/utils/abi/abi-utils";
 import { dispatchSelectedMethod } from "./request-dispatcher";
+import { createRequestSenderContext } from "./sdk-transport-client";
 import type { RequestSenderContext } from "./request-types";
 
 describe("request-dispatcher", () => {
   it("dispatches on-chain methods through the on-chain sender", async () => {
     const parsedAbi = parseAbiSource(lyquidTestAbi);
-    const context: RequestSenderContext = {
+    const context: RequestSenderContext = createRequestSenderContext({
       rpcEndpoint: "http://localhost:8545",
       accountAddress: "0x0000000000000000000000000000000000000001",
       walletClient: { sendTransaction: vi.fn() },
       publicClient: {},
       offChainFetch: vi.fn()
-    };
+    });
     const onChainSender = vi.fn().mockResolvedValue({ raw: { chain: true } });
     const offChainSender = vi.fn();
 
@@ -32,13 +33,13 @@ describe("request-dispatcher", () => {
 
   it("dispatches off-chain methods through the off-chain sender", async () => {
     const parsedAbi = parseAbiSource(lyquidTestAbi);
-    const context: RequestSenderContext = {
+    const context: RequestSenderContext = createRequestSenderContext({
       rpcEndpoint: "http://localhost:8545",
       accountAddress: undefined,
       walletClient: undefined,
       publicClient: undefined,
       offChainFetch: vi.fn()
-    };
+    });
     const onChainSender = vi.fn();
     const offChainSender = vi.fn().mockResolvedValue({ raw: { offChain: true } });
 
@@ -61,7 +62,7 @@ describe("request-dispatcher", () => {
         parsedAbi: parseAbiSource(lyquidTestAbi),
         selectedMethod: "missing(bytes)",
         args: [],
-        context: { rpcEndpoint: "", offChainFetch: vi.fn() },
+        context: createRequestSenderContext({ rpcEndpoint: "http://localhost:8545", offChainFetch: vi.fn() }),
         onChainSender: vi.fn(),
         offChainSender: vi.fn()
       })

@@ -16,6 +16,7 @@ import { buildLyquidDeploymentTransaction, type UploadedArtifactBundle } from "@
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
 import { sendLyquidDeployment } from "@/utils/request/lyquid-deployment-sender";
 import { fetchRpcTransaction } from "@/utils/request/rpc-transaction-client";
+import { createRequestSenderContext } from "@/utils/request/sdk-transport-client";
 import { type BrowserWindowWithWallet, createRunTitle, getErrorMessage, getTxHash } from "./workbench-page-utils";
 import { WorkbenchSettingsDialog } from "./workbench-settings-dialog";
 
@@ -138,16 +139,17 @@ export default function HomePage() {
       }
 
       const reviewPayload = prepareDeploymentPayload();
+      const offChainFetch = (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init);
       const raw = await sendLyquidDeployment({
         artifact: currentArtifact,
         bartenderAddress,
         constructorValues,
-        context: {
+        context: createRequestSenderContext({
           rpcEndpoint: settings.rpcEndpoint,
           accountAddress: account.address,
           walletClient: createBrowserWalletTransactionClient((window as BrowserWindowWithWallet).ethereum),
-          offChainFetch: (input, init) => fetch(input, init)
-        }
+          offChainFetch
+        })
       });
       const displayRaw = {
         ...raw,
@@ -181,7 +183,11 @@ export default function HomePage() {
     });
 
     try {
-      const transactionRaw = await fetchRpcTransaction({ rpcEndpoint: record.env.rpcEndpoint, transactionHash: record.txHash, offChainFetch: (input, init) => fetch(input, init) });
+      const context = createRequestSenderContext({
+        rpcEndpoint: record.env.rpcEndpoint,
+        offChainFetch: (input, init) => fetch(input, init)
+      });
+      const transactionRaw = await fetchRpcTransaction({ rpcTransport: context.rpcTransport, transactionHash: record.txHash });
       patchTab(tabId, { status: transactionRaw ? "success" : "loading", transactionRaw: transactionRaw ?? undefined });
     } catch (error) {
       patchTab(tabId, { status: "error", error: getErrorMessage(error, "Failed to fetch RPC transaction.") });

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchRpcTransaction, fetchRpcTransactionResponse } from "./rpc-transaction-client";
+import { createRequestSenderContext } from "./sdk-transport-client";
 
 describe("rpc-transaction-client", () => {
   it("fetches transaction details by hash from the configured RPC endpoint", async () => {
@@ -18,11 +19,12 @@ describe("rpc-transaction-client", () => {
         })
     } as Response);
 
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
+
     await expect(
       fetchRpcTransaction({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
         transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
-        offChainFetch
+        rpcTransport: context.rpcTransport
       })
     ).resolves.toMatchObject({
       hash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
@@ -57,11 +59,12 @@ describe("rpc-transaction-client", () => {
       json: () => Promise.resolve(rawResponse)
     } as Response);
 
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
+
     await expect(
       fetchRpcTransactionResponse({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
         transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
-        offChainFetch
+        rpcTransport: context.rpcTransport
       })
     ).resolves.toEqual(rawResponse);
   });

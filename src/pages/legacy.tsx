@@ -13,6 +13,7 @@ import { fetchLyquidDeploymentArtifactFromOci } from "@/utils/oci-deployment-art
 import { createBrowserWalletTransactionClient } from "@/utils/request/browser-wallet-client";
 import { sendLyquidDeployment } from "@/utils/request/lyquid-deployment-sender";
 import { fetchNetworkBartenderInfo } from "@/utils/request/lyquid-info-client";
+import { createRequestSenderContext } from "@/utils/request/sdk-transport-client";
 
 type BrowserWindowWithWallet = Window & {
   ethereum?: Parameters<typeof createBrowserWalletTransactionClient>[0];
@@ -113,16 +114,17 @@ export default function LegacyPage() {
 
     try {
       setIsDeploying(true);
+      const offChainFetch = (input: RequestInfo | URL, init?: RequestInit) => fetch(input, init);
       const raw = await sendLyquidDeployment({
         artifact: selectedArtifact,
         bartenderAddress: settings.bartenderAddress,
         constructorValues,
-        context: {
+        context: createRequestSenderContext({
           rpcEndpoint: settings.rpcEndpoint,
           accountAddress: account.address,
           walletClient: createBrowserWalletTransactionClient((window as BrowserWindowWithWallet).ethereum),
-          offChainFetch: (input, init) => fetch(input, init)
-        }
+          offChainFetch
+        })
       });
       const transactionHash = getTransactionHash(raw);
       const signedPayloadHash = await hashPayload(raw);
@@ -154,9 +156,12 @@ export default function LegacyPage() {
 
     try {
       setIsFetchingBartender(true);
-      const info = await fetchNetworkBartenderInfo({
+      const context = createRequestSenderContext({
         rpcEndpoint: settings.rpcEndpoint,
         offChainFetch: (input, init) => fetch(input, init)
+      });
+      const info = await fetchNetworkBartenderInfo({
+        serviceTransport: context.serviceTransport
       });
 
       if (!info) {

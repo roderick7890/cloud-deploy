@@ -90,7 +90,7 @@ export async function sendLyquidDeployment({
 
   const chain = await fetchRpcChain({
     rpcEndpoint: context.rpcEndpoint,
-    offChainFetch: context.offChainFetch
+    rpcTransport: context.rpcTransport
   });
   const deploymentTransaction = buildLyquidDeploymentTransaction({
     artifact,
@@ -107,9 +107,8 @@ export async function sendLyquidDeployment({
     data: deploymentTransaction.data
   });
   const receipt = await waitForRpcTransactionReceipt({
-    rpcEndpoint: context.rpcEndpoint,
+    rpcClient: context.rpcClient,
     transactionHash,
-    offChainFetch: context.offChainFetch,
     pollIntervalMs: receiptPollIntervalMs,
     timeoutMs: receiptTimeoutMs
   });
@@ -124,9 +123,8 @@ export async function sendLyquidDeployment({
 
   try {
     lyquidId = await fetchLyquidIdByAddress({
-      rpcEndpoint: context.rpcEndpoint,
-      contractAddress,
-      offChainFetch: context.offChainFetch
+      serviceTransport: context.serviceTransport,
+      contractAddress
     });
   } catch (error) {
     lyquidIdLookupError = error instanceof Error ? error.message : "Failed to resolve Lyquid ID by address.";

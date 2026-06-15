@@ -40,12 +40,11 @@ export async function sendOnChainMethod({ method, args, context }: MethodSenderI
 
   const chain = await fetchRpcChain({
     rpcEndpoint: context.rpcEndpoint,
-    offChainFetch: context.offChainFetch
+    rpcTransport: context.rpcTransport
   });
   const contractAddress = await fetchLyquidContractAddress({
-    rpcEndpoint: context.rpcEndpoint,
     lyquidId: context.lyquidId,
-    offChainFetch: context.offChainFetch
+    serviceTransport: context.serviceTransport
   });
 
   if (!contractAddress) {
@@ -72,9 +71,8 @@ export async function sendOnChainMethod({ method, args, context }: MethodSenderI
 
   try {
     transaction = await fetchRpcTransaction({
-      rpcEndpoint: context.rpcEndpoint,
       transactionHash,
-      offChainFetch: context.offChainFetch
+      rpcTransport: context.rpcTransport
     });
   } catch (error) {
     transactionLookupError = error instanceof Error ? error.message : "Failed to fetch RPC transaction.";

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchRpcChain } from "./rpc-chain-client";
+import { createRequestSenderContext } from "./sdk-transport-client";
 
 describe("rpc-chain-client", () => {
   it("fetches chainId from the configured RPC endpoint and builds a wallet chain", async () => {
@@ -8,7 +9,9 @@ describe("rpc-chain-client", () => {
       json: () => Promise.resolve({ jsonrpc: "2.0", id: "chain-id", result: "0x7a69" })
     } as Response);
 
-    await expect(fetchRpcChain({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch })).resolves.toMatchObject({
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
+
+    await expect(fetchRpcChain({ rpcEndpoint: context.rpcEndpoint, rpcTransport: context.rpcTransport })).resolves.toMatchObject({
       id: 31337,
       rpcUrls: {
         default: {
@@ -37,7 +40,9 @@ describe("rpc-chain-client", () => {
       json: () => Promise.resolve({ jsonrpc: "2.0", id: "chain-id", result: "0x7a69" })
     } as Response);
 
-    await expect(fetchRpcChain({ rpcEndpoint: "http://127.0.0.1:10087", offChainFetch })).resolves.toMatchObject({
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087", offChainFetch });
+
+    await expect(fetchRpcChain({ rpcEndpoint: context.rpcEndpoint, rpcTransport: context.rpcTransport })).resolves.toMatchObject({
       rpcUrls: {
         default: {
           http: ["http://127.0.0.1:10087/api"]

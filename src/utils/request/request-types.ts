@@ -1,3 +1,5 @@
+import type { Client } from "lyquor-sdk";
+import type { Transport } from "lyquor-sdk/core";
 import type { Chain } from "viem";
 import type { NormalizedAbiMethod, ParsedAbi } from "@/types/abi";
 
@@ -13,6 +15,9 @@ export type ReceiptPublicClient = {
 
 export type RequestSenderContext = {
   rpcEndpoint: string;
+  serviceTransport: Transport;
+  rpcTransport: Transport;
+  rpcClient: Client;
   lyquidId?: string;
   accountAddress?: `0x${string}`;
   walletClient?: WalletTransactionClient | null;

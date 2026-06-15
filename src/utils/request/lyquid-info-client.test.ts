@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { fetchLyquidContractAddress, fetchLyquidIdByAddress, fetchNetworkBartenderInfo } from "./lyquid-info-client";
+import { createRequestSenderContext } from "./sdk-transport-client";
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -20,12 +21,12 @@ describe("fetchLyquidContractAddress", () => {
         }
       })
     );
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
 
     await expect(
       fetchLyquidContractAddress({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
+        serviceTransport: context.serviceTransport,
         lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
-        offChainFetch
       })
     ).resolves.toBe("0x610178dA211FEF7D417bC0e6FeD39F05609AD788");
 
@@ -44,24 +45,24 @@ describe("fetchLyquidContractAddress", () => {
 
   it("returns null when the Lyquid has no deployed contract", async () => {
     const offChainFetch = vi.fn().mockResolvedValue(jsonResponse({ lyquidInfo: {} }));
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
 
     await expect(
       fetchLyquidContractAddress({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
-        lyquidId: "Lyquid-empty",
-        offChainFetch
+        serviceTransport: context.serviceTransport,
+        lyquidId: "Lyquid-empty"
       })
     ).resolves.toBeNull();
   });
 
   it("includes the request URL and reason when the status check cannot reach the node", async () => {
     const offChainFetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
 
     await expect(
       fetchLyquidContractAddress({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
-        lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
-        offChainFetch
+        serviceTransport: context.serviceTransport,
+        lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5"
       })
     ).rejects.toThrow("Network request failed for GetLyquidInfo: Failed to fetch.");
   });
@@ -81,11 +82,11 @@ describe("fetchNetworkBartenderInfo", () => {
         }
       })
     );
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
 
     await expect(
       fetchNetworkBartenderInfo({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
-        offChainFetch
+        serviceTransport: context.serviceTransport
       })
     ).resolves.toEqual({
       lyquidId: "Lyquid-bartender",
@@ -111,12 +112,12 @@ describe("fetchLyquidIdByAddress", () => {
         }
       })
     );
+    const context = createRequestSenderContext({ rpcEndpoint: "http://127.0.0.1:10087/api", offChainFetch });
 
     await expect(
       fetchLyquidIdByAddress({
-        rpcEndpoint: "http://127.0.0.1:10087/api",
-        contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
-        offChainFetch
+        serviceTransport: context.serviceTransport,
+        contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
       })
     ).resolves.toBe("Lyquid-new");
 

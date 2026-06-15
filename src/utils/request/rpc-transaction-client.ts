@@ -1,25 +1,17 @@
-import { waitForTransactionReceipt } from "lyquor-sdk";
-import { createSdkRpcTransport, requestSdkRpc } from "./sdk-transport-client";
+import type { RequestSenderContext } from "./request-types";
 
-type FetchRpcTransactionInput = {
-  rpcEndpoint: string;
+type FetchRpcTransactionInput = Pick<RequestSenderContext, "rpcTransport"> & {
   transactionHash: `0x${string}`;
-  offChainFetch: typeof fetch;
 };
 
-type WaitForRpcTransactionReceiptInput = FetchRpcTransactionInput & {
+type WaitForRpcTransactionReceiptInput = Pick<RequestSenderContext, "rpcClient"> & {
+  transactionHash: `0x${string}`;
   pollIntervalMs?: number;
   timeoutMs?: number;
 };
 
-export async function fetchRpcTransactionResponse({ rpcEndpoint, transactionHash, offChainFetch }: FetchRpcTransactionInput) {
-  if (!rpcEndpoint) {
-    throw new Error("RPC endpoint is required.");
-  }
-
-  const result = await requestSdkRpc({
-    rpcEndpoint,
-    fetchImpl: offChainFetch,
+export async function fetchRpcTransactionResponse({ rpcTransport, transactionHash }: FetchRpcTransactionInput) {
+  const result = await rpcTransport.requestRpc({
     method: "eth_getTransactionByHash",
     params: [transactionHash]
   });
@@ -38,18 +30,12 @@ export async function fetchRpcTransaction(input: FetchRpcTransactionInput) {
 }
 
 export async function waitForRpcTransactionReceipt({
-  rpcEndpoint,
+  rpcClient,
   transactionHash,
-  offChainFetch,
   pollIntervalMs = 2000,
   timeoutMs = 120000
 }: WaitForRpcTransactionReceiptInput) {
-  if (!rpcEndpoint) {
-    throw new Error("RPC endpoint is required.");
-  }
-
-  return waitForTransactionReceipt({
-    transport: createSdkRpcTransport({ rpcEndpoint, fetchImpl: offChainFetch }),
+  return rpcClient.waitForTransactionReceipt({
     hash: transactionHash,
     pollingIntervalMs: pollIntervalMs,
     timeoutMs

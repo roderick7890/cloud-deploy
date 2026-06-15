@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseLyquidDeploymentArtifact } from "@/utils/lyquid-deployment-artifact";
 import { sendLyquidDeployment } from "./lyquid-deployment-sender";
+import { createRequestSenderContext } from "./sdk-transport-client";
 
 function jsonResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -50,18 +51,19 @@ describe("lyquid-deployment-sender", () => {
 
       throw new Error(`Unexpected request ${url}`);
     });
+    const context = createRequestSenderContext({
+      rpcEndpoint: "http://127.0.0.1:10087/api",
+      accountAddress: "0x1111111111111111111111111111111111111111",
+      walletClient: { sendTransaction, switchChain },
+      offChainFetch
+    });
 
     await expect(
       sendLyquidDeployment({
         artifact,
         bartenderAddress: "0x0000000000000000000000000000000000000001",
         constructorValues: { initialValue: "7" },
-        context: {
-          rpcEndpoint: "http://127.0.0.1:10087/api",
-          accountAddress: "0x1111111111111111111111111111111111111111",
-          walletClient: { sendTransaction, switchChain },
-          offChainFetch
-        },
+        context,
         receiptPollIntervalMs: 1,
         receiptTimeoutMs: 50
       })

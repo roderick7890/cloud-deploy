@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { getJsonRpcEndpoint } from "./endpoint-utils";
-import { createSdkTransport, requestSdkRpc } from "./sdk-transport-client";
+import { createRequestSenderContext, createSdkTransport } from "./sdk-transport-client";
 
 describe("sdk transport client", () => {
   it("keeps service requests on the node endpoint without the dev proxy", async () => {
@@ -27,12 +27,14 @@ describe("sdk transport client", () => {
 
   it("keeps JSON-RPC requests on /api without the dev proxy", async () => {
     const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
-    const result = await requestSdkRpc({
+    const context = createRequestSenderContext({
       rpcEndpoint: "https://2folhfgf4kuyfdenaq3l4dnamv7yxrnqq3zbp64thfa5esqgxhv6wzqa.devnet-alpha.lyquor.dev/",
-      fetchImpl: ((input, init) => {
+      offChainFetch: ((input, init) => {
         calls.push([input, init]);
         return Promise.resolve(new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x7a69" }), { status: 200 }));
-      }) as typeof fetch,
+      }) as typeof fetch
+    });
+    const result = await context.rpcTransport.requestRpc({
       method: "eth_chainId",
       params: []
     });

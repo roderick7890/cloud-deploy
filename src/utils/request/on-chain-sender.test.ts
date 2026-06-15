@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseAbiSource } from "@/utils/abi/abi-utils";
 import { sendOnChainMethod } from "./on-chain-sender";
+import { createRequestSenderContext } from "./sdk-transport-client";
 import type { RequestSenderContext } from "./request-types";
 
 function jsonResponse(body: unknown) {
@@ -33,7 +34,7 @@ describe("on-chain-sender", () => {
     const sendTransaction = vi.fn().mockResolvedValue("0xabc123");
     const switchChain = vi.fn().mockResolvedValue(undefined);
     const waitForTransactionReceipt = vi.fn().mockResolvedValue({ status: "success", transactionHash: "0xabc123" });
-    const context: RequestSenderContext = {
+    const context: RequestSenderContext = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       accountAddress: "0x1111111111111111111111111111111111111111",
@@ -67,7 +68,7 @@ describe("on-chain-sender", () => {
 
         throw new Error(`Unexpected request ${String(input)}`);
       }
-    };
+    });
     const sourceHash = "0x".padEnd(66, "1");
     const artifactHash = "0x".padEnd(66, "2");
 
@@ -117,7 +118,7 @@ describe("on-chain-sender", () => {
     const sendTransaction = vi.fn().mockResolvedValue("0xabc123");
     const switchChain = vi.fn().mockRejectedValueOnce(new Error("Unknown chain")).mockResolvedValueOnce(undefined);
     const addChain = vi.fn().mockResolvedValue(undefined);
-    const context: RequestSenderContext = {
+    const context: RequestSenderContext = createRequestSenderContext({
       rpcEndpoint: "http://127.0.0.1:10087/api",
       lyquidId: "Lyquid-Btgwc4RMJfNvcqtLxHkhXHq3ivsUH2TX5",
       accountAddress: "0x1111111111111111111111111111111111111111",
@@ -133,7 +134,7 @@ describe("on-chain-sender", () => {
 
         throw new Error(`Unexpected request ${String(input)}`);
       }
-    };
+    });
 
     await sendOnChainMethod({
       method: parsedAbi.methods[0],

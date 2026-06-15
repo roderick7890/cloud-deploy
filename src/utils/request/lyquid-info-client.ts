@@ -1,22 +1,15 @@
 import { getAddress, isAddress, type Address } from "viem";
 import { getLyquidByAddress, getLyquidInfo } from "lyquor-sdk/core";
-import { createSdkTransport } from "./sdk-transport-client";
+import type { RequestSenderContext } from "./request-types";
 
-type FetchLyquidContractAddressInput = {
-  rpcEndpoint: string;
+type LyquidServiceInput = Pick<RequestSenderContext, "serviceTransport">;
+
+type FetchLyquidContractAddressInput = LyquidServiceInput & {
   lyquidId: string;
-  offChainFetch: typeof fetch;
 };
 
-type FetchLyquidIdByAddressInput = {
-  rpcEndpoint: string;
+type FetchLyquidIdByAddressInput = LyquidServiceInput & {
   contractAddress: string;
-  offChainFetch: typeof fetch;
-};
-
-type FetchNetworkBartenderInfoInput = {
-  rpcEndpoint: string;
-  offChainFetch: typeof fetch;
 };
 
 export type NetworkBartenderInfo = {
@@ -68,14 +61,6 @@ function getNetworkErrorReason(error: unknown) {
   return "Unknown network error";
 }
 
-function createLyquidTransport(rpcEndpoint: string, offChainFetch: typeof fetch) {
-  try {
-    return createSdkTransport({ rpcEndpoint, fetchImpl: offChainFetch });
-  } catch {
-    throw new Error("RPC endpoint must be an absolute URL.");
-  }
-}
-
 function getContractAddressFromInfo(raw: unknown) {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -123,9 +108,8 @@ function getLyquidIdFromInfo(raw: unknown) {
 }
 
 export async function fetchLyquidContractAddress({
-  rpcEndpoint,
+  serviceTransport,
   lyquidId,
-  offChainFetch
 }: FetchLyquidContractAddressInput): Promise<Address | null> {
   const trimmedLyquidId = lyquidId.trim();
 
@@ -137,11 +121,10 @@ export async function fetchLyquidContractAddress({
     return getAddress(trimmedLyquidId);
   }
 
-  const transport = createLyquidTransport(rpcEndpoint, offChainFetch);
   let raw: unknown;
 
   try {
-    raw = await getLyquidInfo(transport, { lyquid: trimmedLyquidId });
+    raw = await getLyquidInfo(serviceTransport, { lyquid: trimmedLyquidId });
   } catch (error) {
     throw Object.assign(
       new Error(
@@ -171,14 +154,12 @@ export async function fetchLyquidContractAddress({
 }
 
 export async function fetchNetworkBartenderInfo({
-  rpcEndpoint,
-  offChainFetch
-}: FetchNetworkBartenderInfoInput): Promise<NetworkBartenderInfo | null> {
-  const transport = createLyquidTransport(rpcEndpoint, offChainFetch);
+  serviceTransport
+}: LyquidServiceInput): Promise<NetworkBartenderInfo | null> {
   let raw: unknown;
 
   try {
-    raw = await getLyquidInfo(transport);
+    raw = await getLyquidInfo(serviceTransport);
   } catch (error) {
     throw Object.assign(
       new Error(
@@ -211,19 +192,17 @@ export async function fetchNetworkBartenderInfo({
 }
 
 export async function fetchLyquidIdByAddress({
-  rpcEndpoint,
-  contractAddress,
-  offChainFetch
+  serviceTransport,
+  contractAddress
 }: FetchLyquidIdByAddressInput): Promise<string | null> {
   if (!isAddress(contractAddress)) {
     throw new Error("Contract address is invalid.");
   }
 
-  const transport = createLyquidTransport(rpcEndpoint, offChainFetch);
   let raw: unknown;
 
   try {
-    raw = await getLyquidByAddress(transport, { address: getAddress(contractAddress) });
+    raw = await getLyquidByAddress(serviceTransport, { address: getAddress(contractAddress) });
   } catch (error) {
     throw Object.assign(
       new Error(

@@ -1,11 +1,8 @@
 import type { Chain } from "viem";
 import { getJsonRpcEndpoint } from "./endpoint-utils";
-import { requestSdkRpc } from "./sdk-transport-client";
+import type { RequestSenderContext } from "./request-types";
 
-type FetchRpcChainInput = {
-  rpcEndpoint: string;
-  offChainFetch: typeof fetch;
-};
+type FetchRpcChainInput = Pick<RequestSenderContext, "rpcEndpoint" | "rpcTransport">;
 
 function parseChainId(result: unknown) {
   if (typeof result !== "string" || !/^0x[0-9a-f]+$/i.test(result)) {
@@ -30,15 +27,13 @@ function createRpcChain(rpcEndpoint: string, chainId: number): Chain {
   };
 }
 
-export async function fetchRpcChain({ rpcEndpoint, offChainFetch }: FetchRpcChainInput) {
+export async function fetchRpcChain({ rpcEndpoint, rpcTransport }: FetchRpcChainInput) {
   if (!rpcEndpoint) {
     throw new Error("RPC endpoint is required.");
   }
 
   const jsonRpcEndpoint = getJsonRpcEndpoint(rpcEndpoint);
-  const result = await requestSdkRpc({
-    rpcEndpoint,
-    fetchImpl: offChainFetch,
+  const result = await rpcTransport.requestRpc({
     method: "eth_chainId",
     params: []
   });
