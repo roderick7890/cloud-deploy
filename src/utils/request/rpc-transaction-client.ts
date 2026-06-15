@@ -1,4 +1,4 @@
-import { getRequestEndpoint } from "./endpoint-utils";
+import { getJsonRpcEndpoint, getRequestEndpoint } from "./endpoint-utils";
 
 type FetchRpcTransactionInput = {
   rpcEndpoint: string;
@@ -50,7 +50,7 @@ export async function fetchRpcTransactionResponse({ rpcEndpoint, transactionHash
     throw new Error("RPC endpoint is required.");
   }
 
-  const url = getRequestEndpoint(rpcEndpoint);
+  const url = getRequestEndpoint(getJsonRpcEndpoint(rpcEndpoint));
   let response: Response;
   let raw: unknown;
 
@@ -96,7 +96,7 @@ export async function fetchRpcTransactionReceiptResponse({ rpcEndpoint, transact
     throw new Error("RPC endpoint is required.");
   }
 
-  const url = getRequestEndpoint(rpcEndpoint);
+  const url = getRequestEndpoint(getJsonRpcEndpoint(rpcEndpoint));
   let response: Response;
   let raw: unknown;
 

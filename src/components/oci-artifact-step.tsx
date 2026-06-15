@@ -1,5 +1,4 @@
 import { Database, LoaderCircle } from "lucide-react";
-import type { ReactNode } from "react";
 import type { AbiParameter } from "viem";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,17 +9,22 @@ import type { LyquidDeploymentArtifact } from "@/utils/lyquid-deployment-artifac
 
 type OciArtifactStepProps = {
   rpcEndpoint: string;
+  bartenderAddress: string;
   repository: string;
   reference: string;
   artifact: LyquidDeploymentArtifact | null;
   isLoading?: boolean;
+  isDeploying?: boolean;
+  isFetchingBartender?: boolean;
   constructorValues?: Record<string, string>;
   onRpcEndpointChange: (value: string) => void;
+  onBartenderAddressChange: (value: string) => void;
   onRepositoryChange: (value: string) => void;
   onReferenceChange: (value: string) => void;
+  onFetchBartender: () => void;
   onLoad: () => void;
+  onDeploy: () => void;
   onConstructorValuesChange?: (values: Record<string, string>) => void;
-  actions?: ReactNode;
 };
 
 function jsonText(value: unknown) {
@@ -37,47 +41,88 @@ function getRawRecord(artifact: LyquidDeploymentArtifact | null) {
 
 export function OciArtifactStep({
   rpcEndpoint,
+  bartenderAddress,
   repository,
   reference,
   artifact,
   isLoading = false,
+  isDeploying = false,
+  isFetchingBartender = false,
   constructorValues = {},
   onRpcEndpointChange,
+  onBartenderAddressChange,
   onRepositoryChange,
   onReferenceChange,
+  onFetchBartender,
   onLoad,
-  onConstructorValuesChange,
-  actions
+  onDeploy,
+  onConstructorValuesChange
 }: OciArtifactStepProps) {
   const raw = getRawRecord(artifact);
   const manifestJson = jsonText(raw.manifest);
   const metadataJson = jsonText(raw.metadata);
   const contractAbiJson = artifact?.contractAbi ? jsonText(artifact.contractAbi) : "";
+  const canDeploy = Boolean(artifact && bartenderAddress && !isLoading && !isDeploying);
 
   return (
-    <div className="mx-auto flex w-full flex-col gap-6">
-      <div className="grid gap-4 rounded-md border bg-card p-4 md:grid-cols-[1.2fr_1fr_1fr_auto] md:items-end">
+    <div className="mx-auto flex w-full flex-col gap-5">
+      <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
         <div className="space-y-2">
-          <Label htmlFor="oci-rpc-endpoint">RPC Endpoint</Label>
-          <Input id="oci-rpc-endpoint" value={rpcEndpoint} onChange={(event) => onRpcEndpointChange(event.target.value)} />
+          <div>
+            <h2 className="text-base font-semibold">Workspace</h2>
+            <p className="text-sm text-muted-foreground">Shared network settings for artifact loading and deployment.</p>
+          </div>
+          <div className="flex items-center justify-between gap-6">
+            <div className="space-y-2 w-full">
+              <Label htmlFor="oci-rpc-endpoint">RPC Endpoint</Label>
+              <Input className="w-full" id="oci-rpc-endpoint" value={rpcEndpoint} onChange={(event) => onRpcEndpointChange(event.target.value)} />
+            </div>
+            <div className="space-y-2 w-full">
+              <Label htmlFor="oci-bartender-address">Bartender Address</Label>
+              <div className="flex gap-2">
+                <Input
+                  className="w-full"
+                  id="oci-bartender-address"
+                  value={bartenderAddress}
+                  onChange={(event) => onBartenderAddressChange(event.target.value)}
+                />
+                <Button type="button" variant="outline" disabled={!rpcEndpoint || isFetchingBartender} onClick={onFetchBartender}>
+                  {isFetchingBartender ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                  Fetch
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <hr className="my-4" />
         <div className="space-y-2">
-          <Label htmlFor="oci-repository">Repository</Label>
-          <Input id="oci-repository" value={repository} onChange={(event) => onRepositoryChange(event.target.value)} />
+          <div>
+            <h2 className="text-base font-semibold">Artifact Reference</h2>
+            <p className="text-sm text-muted-foreground">Repository and tag or digest inside this workspace.</p>
+          </div>
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4 flex-1">
+              <div className="space-y-2 w-full">
+                <Label htmlFor="oci-repository">Repository</Label>
+                <Input className="w-full" id="oci-repository" value={repository} onChange={(event) => onRepositoryChange(event.target.value)} />
+              </div>
+              <div className="space-y-2 w-full">
+                <Label htmlFor="oci-reference">Reference</Label>
+                <Input className="w-full" id="oci-reference" value={reference} onChange={(event) => onReferenceChange(event.target.value)} />
+              </div>
+            </div>
+            <Button type="button" className="sm:self-end" disabled={isLoading || !rpcEndpoint || !repository || !reference} onClick={onLoad}>
+              {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Database className="size-4" />}
+              Load Artifact
+            </Button>
+          </div>
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="oci-reference">Reference</Label>
-          <Input id="oci-reference" value={reference} onChange={(event) => onReferenceChange(event.target.value)} />
-        </div>
-        <Button type="button" className="md:self-end" disabled={isLoading || !rpcEndpoint || !repository || !reference} onClick={onLoad}>
-          {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Database className="size-4" />}
-          Load Artifact
-        </Button>
-      </div>
+      </section>
 
       {artifact ? (
-        <div className="grid gap-4 xl:grid-cols-[1fr_1fr]">
-          <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
+        <div className="flex  gap-4">
+          <section className="flex-2 flex flex-col gap-4 rounded-md border bg-card p-4">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-medium">{artifact.name}</p>
               <Badge variant="outline">{artifact.repoHint}</Badge>
@@ -103,9 +148,14 @@ export function OciArtifactStep({
             </div>
           </section>
 
-          <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
+          <section className="flex-1 flex flex-col gap-4 rounded-md border bg-card p-4 h-fit">
             <div className="space-y-2">
-              <Label htmlFor="oci-deployment-bytecode">Deployment Bytecode</Label>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="oci-deployment-bytecode">Deployment Bytecode</Label>
+                  {!bartenderAddress ? <p className="text-sm text-destructive">Bartender Address is required before deploy.</p> : null}
+                </div>
+              </div>
               <Textarea
                 id="oci-deployment-bytecode"
                 aria-label="Deployment Bytecode"
@@ -114,6 +164,11 @@ export function OciArtifactStep({
                 rows={12}
                 className="w-full font-mono"
               />
+              <div className="flex justify-end">
+                <Button type="button" disabled={!canDeploy} onClick={onDeploy} className="mt-4">
+                  {isDeploying ? "Deploying..." : "Deploy"}
+                </Button>
+              </div>
             </div>
 
             {contractAbiJson ? (
@@ -146,8 +201,6 @@ export function OciArtifactStep({
           </section>
         </div>
       ) : null}
-
-      {actions}
     </div>
   );
 }

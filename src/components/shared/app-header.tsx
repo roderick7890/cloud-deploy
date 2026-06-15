@@ -9,7 +9,7 @@ type AppHeaderProps = {
   onConnectWallet: () => void;
   onCopyWalletAddress?: () => void;
   onDisconnectWallet?: () => void;
-  onOpenSettings: () => void;
+  onOpenSettings?: () => void;
 };
 
 export function AppHeader({
@@ -68,9 +68,11 @@ export function AppHeader({
             </div>
           ) : null}
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onOpenSettings} aria-label="Settings">
-          <Settings className="h-4 w-4" />
-        </Button>
+        {onOpenSettings ? (
+          <Button type="button" variant="ghost" size="icon" onClick={onOpenSettings} aria-label="Settings">
+            <Settings className="h-4 w-4" />
+          </Button>
+        ) : null}
       </div>
     </header>
   );

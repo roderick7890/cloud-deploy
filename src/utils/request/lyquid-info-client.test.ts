@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchLyquidContractAddress, fetchLyquidIdByAddress } from "./lyquid-info-client";
+import { fetchLyquidContractAddress, fetchLyquidIdByAddress, fetchNetworkBartenderInfo } from "./lyquid-info-client";
 
 function jsonResponse(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
@@ -65,6 +65,41 @@ describe("fetchLyquidContractAddress", () => {
       })
     ).rejects.toThrow(
       "Network request failed for /__cloud-deploy-proxy?target=http%3A%2F%2F127.0.0.1%3A10087%2Flyquor.lyquid.v1.LyquidService%2FGetLyquidInfo: Failed to fetch."
+    );
+  });
+});
+
+describe("fetchNetworkBartenderInfo", () => {
+  it("returns the network bartender contract from empty GetLyquidInfo", async () => {
+    const offChainFetch = vi.fn().mockResolvedValue(
+      jsonResponse({
+        lyquidInfo: {
+          lyquidId: {
+            value: "Lyquid-bartender"
+          },
+          contract: {
+            value: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+          }
+        }
+      })
+    );
+
+    await expect(
+      fetchNetworkBartenderInfo({
+        rpcEndpoint: "http://127.0.0.1:10087/api",
+        offChainFetch
+      })
+    ).resolves.toEqual({
+      lyquidId: "Lyquid-bartender",
+      contractAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+    });
+
+    expect(offChainFetch).toHaveBeenCalledWith(
+      expect.stringContaining(encodeURIComponent("http://127.0.0.1:10087/lyquor.lyquid.v1.LyquidService/GetLyquidInfo")),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({})
+      })
     );
   });
 });

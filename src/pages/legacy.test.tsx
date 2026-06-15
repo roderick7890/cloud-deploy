@@ -101,17 +101,14 @@ describe("LegacyPage", () => {
     expect(screen.getByLabelText("greeting")).toBeInTheDocument();
   });
 
-  it("prepares deployment data before asking a disconnected wallet to connect", async () => {
+  it("asks a disconnected wallet to connect without opening the review step", async () => {
     const user = await uploadAndSelectArtifact();
     await user.type(screen.getByLabelText("greeting"), "hello");
 
     await user.click(screen.getByRole("button", { name: "Deploy" }));
 
-    expect(await screen.findByText("Deployment Data")).toBeInTheDocument();
-    expect(screen.getByText("Deploy Result")).toBeInTheDocument();
-    expect(screen.getByText("Connect wallet to deploy")).toBeInTheDocument();
-    expect((screen.getByLabelText("Contract ABI") as HTMLTextAreaElement).value).toContain('"name": "increment"');
-    expect(screen.getByText(/calldata/)).toBeInTheDocument();
+    expect(connectMock).toHaveBeenCalled();
+    expect(screen.queryByText("Deployment Data")).not.toBeInTheDocument();
     expect(sendLyquidDeploymentMock).not.toHaveBeenCalled();
   });
 

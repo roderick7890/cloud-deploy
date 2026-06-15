@@ -16,6 +16,16 @@ type FetchLyquidIdByAddressInput = {
   offChainFetch: typeof fetch;
 };
 
+type FetchNetworkBartenderInfoInput = {
+  rpcEndpoint: string;
+  offChainFetch: typeof fetch;
+};
+
+export type NetworkBartenderInfo = {
+  lyquidId: string | null;
+  contractAddress: Address;
+};
+
 function getResponseMessage(raw: unknown) {
   if (!raw || typeof raw !== "object") {
     return null;
@@ -100,6 +110,24 @@ function getLyquidIdFromAddressResponse(raw: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function getLyquidIdFromInfo(raw: unknown) {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+
+  const response = raw as {
+    lyquidInfo?: { lyquidId?: { value?: unknown }; lyquid_id?: { value?: unknown } };
+    lyquid_info?: { lyquidId?: { value?: unknown }; lyquid_id?: { value?: unknown } };
+  };
+  const value =
+    response.lyquidInfo?.lyquidId?.value ??
+    response.lyquidInfo?.lyquid_id?.value ??
+    response.lyquid_info?.lyquidId?.value ??
+    response.lyquid_info?.lyquid_id?.value;
+
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
 export async function fetchLyquidContractAddress({
   rpcEndpoint,
   lyquidId,
@@ -158,6 +186,54 @@ export async function fetchLyquidContractAddress({
   }
 
   return getAddress(contractAddress);
+}
+
+export async function fetchNetworkBartenderInfo({
+  rpcEndpoint,
+  offChainFetch
+}: FetchNetworkBartenderInfoInput): Promise<NetworkBartenderInfo | null> {
+  const url = getLyquidServiceEndpoint(rpcEndpoint, getLyquidInfoPath);
+  let response: Response;
+  let raw: unknown;
+
+  try {
+    response = await offChainFetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    raw = await response.json();
+  } catch (error) {
+    throw Object.assign(
+      new Error(
+        `Network request failed for ${url}: ${getNetworkErrorReason(error)}. Check CORS, the target host and port, and whether the RPC node is running.`
+      ),
+      { cause: error }
+    );
+  }
+
+  const responseMessage = getResponseMessage(raw);
+
+  if (!response.ok || responseMessage) {
+    throw new Error(responseMessage ?? "Failed to resolve network Bartender address.");
+  }
+
+  const contractAddress = getContractAddressFromInfo(raw);
+
+  if (!contractAddress) {
+    return null;
+  }
+
+  if (!isAddress(contractAddress)) {
+    throw new Error("Resolved network Bartender address is invalid.");
+  }
+
+  return {
+    lyquidId: getLyquidIdFromInfo(raw),
+    contractAddress: getAddress(contractAddress)
+  };
 }
 
 export async function fetchLyquidIdByAddress({

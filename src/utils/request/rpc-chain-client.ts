@@ -1,5 +1,5 @@
 import type { Chain } from "viem";
-import { getRequestEndpoint } from "./endpoint-utils";
+import { getJsonRpcEndpoint, getRequestEndpoint } from "./endpoint-utils";
 
 type FetchRpcChainInput = {
   rpcEndpoint: string;
@@ -74,7 +74,8 @@ export async function fetchRpcChain({ rpcEndpoint, offChainFetch }: FetchRpcChai
     throw new Error("RPC endpoint is required.");
   }
 
-  const url = getRequestEndpoint(rpcEndpoint);
+  const jsonRpcEndpoint = getJsonRpcEndpoint(rpcEndpoint);
+  const url = getRequestEndpoint(jsonRpcEndpoint);
   let response: Response;
   let raw: unknown;
 
@@ -102,5 +103,5 @@ export async function fetchRpcChain({ rpcEndpoint, offChainFetch }: FetchRpcChai
     throw new Error(responseErrorMessage ?? "Failed to fetch RPC chain ID.");
   }
 
-  return createRpcChain(rpcEndpoint, parseChainId(raw));
+  return createRpcChain(jsonRpcEndpoint, parseChainId(raw));
 }
