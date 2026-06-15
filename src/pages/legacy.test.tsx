@@ -60,7 +60,10 @@ describe("LegacyPage", () => {
       if (url.endsWith("/v2/lyquids/local/manifests/latest")) {
         return new Response(JSON.stringify(manifest), {
           status: 200,
-          headers: { "docker-content-digest": `sha256:${"1".repeat(64)}` }
+          headers: {
+            "content-type": "application/vnd.oci.image.manifest.v1+json",
+            "docker-content-digest": `sha256:${"1".repeat(64)}`
+          }
         });
       }
 

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 
 type ActionDeckProps = {
   selectedArtifactPath: string;
-  constructorFields: AbiParameter[];
+  constructorFields: readonly AbiParameter[];
   constructorValues: Record<string, string>;
   isDeploying: boolean;
   onConstructorValuesChange: (values: Record<string, string>) => void;
