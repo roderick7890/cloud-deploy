@@ -1,15 +1,49 @@
 #!/usr/bin/env node
 
 import { cp, mkdir, rm } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { homedir } from "node:os";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const distDir = resolve(repoRoot, "dist");
 const lyquidDir = resolve(repoRoot, "lyquid");
 const assetsDir = resolve(lyquidDir, "assets");
 const manifestPath = resolve(lyquidDir, "Cargo.toml");
+
+function commandExists(command) {
+  const result = spawnSync("command", ["-v", command], {
+    shell: true,
+    stdio: "ignore"
+  });
+
+  return result.status === 0 ? command : "";
+}
+
+export function resolveShakerCommand({
+  env = process.env,
+  which = commandExists,
+  exists = existsSync,
+  home = homedir()
+} = {}) {
+  if (env.SHAKER_BIN) {
+    return env.SHAKER_BIN;
+  }
+
+  const pathCommand = which("shaker");
+  if (pathCommand) {
+    return pathCommand;
+  }
+
+  const shakenupCommand = resolve(home, ".shakenup/bin/shaker");
+  if (exists(shakenupCommand)) {
+    return shakenupCommand;
+  }
+
+  return "shaker";
+}
 
 export function parseDeployArgs(argv) {
   const options = {
@@ -22,10 +56,23 @@ export function parseDeployArgs(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
 
+    if (!arg) {
+      continue;
+    }
+
     if (arg === "--endpoint") {
       options.endpoint = argv[++index] ?? "";
     } else if (arg === "--reference" || arg === "-r") {
-      options.reference = argv[++index] ?? "";
+      const nextArg = argv[index + 1] ?? "";
+      if (nextArg && !nextArg.startsWith("-")) {
+        options.reference = nextArg;
+        index += 1;
+      } else {
+        options.reference = "";
+        if (index + 1 < argv.length && !nextArg) {
+          index += 1;
+        }
+      }
     } else if (arg === "--debug") {
       options.debug = true;
     } else {
@@ -40,7 +87,7 @@ export function parseDeployArgs(argv) {
   return options;
 }
 
-export function buildDeployCommand(options, manifest = manifestPath) {
+export function buildDeployCommand(options, manifest = manifestPath, command = resolveShakerCommand()) {
   const args = ["deploy"];
 
   if (options.reference) {
@@ -55,7 +102,7 @@ export function buildDeployCommand(options, manifest = manifestPath) {
 
   args.push(...options.extraArgs, manifest);
 
-  return { command: "shaker", args };
+  return { command, args };
 }
 
 function run(command, args) {
@@ -65,6 +112,10 @@ function run(command, args) {
     stdio: "inherit",
     shell: false
   });
+
+  if (result.error) {
+    throw result.error;
+  }
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
@@ -89,6 +140,7 @@ async function main() {
   if (command === "deploy") {
     await syncLyquidAssets();
     const deploy = buildDeployCommand(parseDeployArgs(args));
+    console.log(`Running: ${deploy.command} ${deploy.args.map((arg) => JSON.stringify(arg)).join(" ")}`);
     run(deploy.command, deploy.args);
     return;
   }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDeployCommand, parseDeployArgs } from "./lyquid-workflow.mjs";
+import { buildDeployCommand, resolveShakerCommand, parseDeployArgs } from "./lyquid-workflow.mjs";
 
 describe("lyquid workflow", () => {
   it("requires an endpoint before deploying", () => {
@@ -38,5 +38,29 @@ describe("lyquid workflow", () => {
       command: "shaker",
       args: ["deploy", "--endpoint", "wss://node.example/ws", "--output", "json", "/repo/lyquid/Cargo.toml"]
     });
+  });
+
+  it("treats a reference flag without a value as empty", () => {
+    const options = parseDeployArgs(["--endpoint", "wss://node.example/ws", "--reference"]);
+
+    expect(buildDeployCommand(options, "/repo/lyquid/Cargo.toml").args).toEqual([
+      "deploy",
+      "--endpoint",
+      "wss://node.example/ws",
+      "--output",
+      "json",
+      "/repo/lyquid/Cargo.toml"
+    ]);
+  });
+
+  it("uses the shakenup shaker path when the binary exists there", () => {
+    expect(
+      resolveShakerCommand({
+        env: {},
+        which: () => "",
+        exists: (path) => path === "/Users/test/.shakenup/bin/shaker",
+        home: "/Users/test"
+      })
+    ).toBe("/Users/test/.shakenup/bin/shaker");
   });
 });
