@@ -1,0 +1,16 @@
+[package]
+name = "cloud-deploy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+lyquid = { path = "../../lyquor/ldk/lyquid/", features = ["ldk"] }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+strip = "debuginfo"
+debug = false
+
+[workspace]

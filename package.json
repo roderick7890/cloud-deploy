@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:lyquid": "node scripts/lyquid-workflow.mjs build",
+    "deploy:lyquid": "node scripts/lyquid-workflow.mjs deploy",
     "start": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

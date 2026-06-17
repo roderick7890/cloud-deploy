@@ -107,7 +107,7 @@ function cloudDeployDevProxy(): Plugin {
 }
 
 export default defineConfig({
-  base: process.env.GITHUB_PAGES === "true" ? githubPagesBase : "/",
+  base: process.env.LYQUID_BUILD === "true" ? "./" : process.env.GITHUB_PAGES === "true" ? githubPagesBase : "/",
   plugins: [react(), tailwindcss(), cloudDeployDevProxy()],
   resolve: {
     alias: {

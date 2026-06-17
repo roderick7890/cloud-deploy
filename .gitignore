@@ -1,5 +1,8 @@
 node_modules/
 dist/
+lyquid/assets/*
+!lyquid/assets/.gitkeep
+lyquid/target/
 .tmp/
 *.tsbuildinfo
 .DS_Store
