@@ -68,11 +68,11 @@ export function AppHeader({
             </div>
           ) : null}
         </div>
-        {onOpenSettings ? (
+        {/* {onOpenSettings ? (
           <Button type="button" variant="ghost" size="icon" onClick={onOpenSettings} aria-label="Settings">
             <Settings className="h-4 w-4" />
           </Button>
-        ) : null}
+        ) : null} */}
       </div>
     </header>
   );
