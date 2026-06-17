@@ -77,17 +77,17 @@ export function ReviewStep({
   const contractAbiJson = contractAbi ? jsonText(contractAbi) : "";
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-auto p-6 ">
+    <div className="relative flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
       {onBack ? (
         <div className="flex">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} className="p-0 hover:bg-transparent!">
             <ArrowLeft className="size-4" />
             Back
           </Button>
         </div>
       ) : null}
       {currentError ? <p className="rounded-md border border-destructive bg-card p-3 text-sm text-destructive">{currentError}</p> : null}
-      <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
+      <section className="flex flex-col gap-4 rounded-md bg-card">
         <div>
           <h2 className="text-base font-semibold">Deployment Data</h2>
           <p className="text-sm text-muted-foreground">Prepared contract creation data for the selected artifact.</p>
@@ -109,7 +109,7 @@ export function ReviewStep({
         )}
       </section>
 
-      <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
+      <section className="flex flex-col gap-4 rounded-md bg-card">
         <div>
           <h2 className="text-base font-semibold">Deploy Result</h2>
           <p className="text-sm text-muted-foreground">Submitted transaction hash and RPC transaction JSON for debugging.</p>
@@ -154,7 +154,7 @@ export function ReviewStep({
         )}
       </section>
 
-      <aside className="flex flex-col gap-3 rounded-md border bg-card p-4 lg:absolute lg:right-6 lg:top-20 lg:w-80">
+      {/* <aside className="flex flex-col gap-3 rounded-md border bg-card p-4 lg:absolute lg:right-6 lg:top-20 lg:w-80">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold">Contract ABI</h2>
           <Button type="button" variant="outline" size="sm" disabled={!contractAbiJson} onClick={onCopyAbi}>
@@ -163,7 +163,7 @@ export function ReviewStep({
           </Button>
         </div>
         <Textarea aria-label="Contract ABI" value={contractAbiJson} readOnly rows={18} className="w-full font-mono" />
-      </aside>
+      </aside> */}
     </div>
   );
 }
