@@ -6,7 +6,7 @@ If a task follows this file, mention `Followed docs/agent/project.md project rul
 
 ## Product Identity
 
-Cloud Deploy is a Lyquor deployment workbench for uploading Lyquid projects, building deploy payloads, reviewing deployment evidence, and submitting deployments through ABI-selected on-chain or off-chain request paths.
+Cloud Deploy is a Lyquor artifact deployment workspace for loading Lyquid OCI artifacts, reviewing deployment evidence, and submitting deployments through wallet-backed request paths.
 
 Canonical project name: `cloud-deploy`.
 
@@ -16,11 +16,11 @@ This repository owns the Cloud Deploy frontend only.
 
 In scope:
 
-- Browser-based project upload and TOML target selection.
-- Build, review, deploy, and deployment history workflows.
+- Browser-based OCI artifact source selection by node, repository, and reference.
+- Artifact load, review, deploy, and update workflows.
 - ABI-driven method selection and argument preparation.
 - Wallet-backed on-chain dispatch and RPC-backed off-chain dispatch.
-- Local runtime workbench UI and the legacy Upload, Build, Review, Deploy wizard.
+- The legacy Upload, Build, Review, Deploy wizard.
 
 Out of scope unless explicitly requested:
 
@@ -57,13 +57,15 @@ Runtime route selection is currently minimal and app-owned:
 
 - `src/main.tsx` mounts `App`.
 - `src/app.tsx` selects the active page from `window.location.pathname`.
-- `src/pages/index.tsx` owns `/`.
+- `src/pages/index.tsx` owns `/` and re-exports the artifact workspace page.
+- `src/pages/artifacts.tsx` owns `/artifacts`.
 - `src/pages/legacy.tsx` owns `/legacy`.
 - `src/config/routes-config.ts` owns route paths and labels when links or navigation need them.
 
 For new route files, prefer pages-style file names under `src/pages`:
 
 - `index.tsx` for `/`
+- `artifacts.tsx` for `/artifacts`
 - `legacy.tsx` for `/legacy`
 - `[id].tsx` for a dynamic route segment if a future router supports it
 
@@ -91,7 +93,6 @@ src/
 Current historical directories:
 
 - `src/lib` exists for older shadcn helper setup. Do not expand it with new domain helpers.
-- `src/components/workbench` contains workbench-specific panels and panes. Keep workbench-only behavior there unless it becomes reusable across workflows.
 - `src/components` still contains legacy wizard step components. Do not move them only for cleanup unless the task includes that migration.
 
 Rules for new code:
@@ -107,7 +108,7 @@ Rules for new code:
 
 Cloud Deploy is a dense operational deploy tool, not a landing page. When there is no design file, default to a Vercel-inspired operational UI: restrained, neutral, border-forward, compact, and highly scannable.
 
-- Keep the first screen as the deploy workbench unless the task explicitly changes the product flow.
+- Keep the first screen as the artifact workspace unless the task explicitly changes the product flow.
 - Keep the app optimized for repeated build/deploy work: compact panes, scannable output, stable controls, and clear status.
 - Keep the legacy wizard as a 100vh Upload, Build, Review, Deploy flow while it exists.
 - Prefer shadcn/ui for generic controls.
@@ -136,10 +137,12 @@ Persisted settings belong in `src/store/settings-store.ts` and should stay limit
 
 `settings-store` owns atomic reconciliation of imported ABI state, `buildMethod`, and `deployMethod`.
 
-Workbench persistence belongs in `src/store/workbench-store.ts` and should stay limited to durable UI preferences and bounded history:
+Artifact workspace preferences belong in `src/store/artifact-workspace-store.ts` and may persist:
 
-- workbench pane layout ratios
-- latest deploy history records, capped by config
+- node workspaces
+- workspace RPC/WS endpoint values
+- artifact repository/reference entries
+- the selected workspace and artifact IDs
 
 Runtime deployment state belongs in `src/store/deploy-session-store.ts` or page-local state depending on workflow scope.
 
@@ -153,7 +156,7 @@ Do not persist:
 - deploy results
 - current tabs
 - logs
-- raw request responses beyond the bounded deploy history shape explicitly owned by the workbench store
+- raw request responses beyond explicit review or result panel data
 
 All browser storage interactions should be owned by a Zustand persisted store by default. Do not scatter direct `localStorage` or `sessionStorage` reads and writes through components, request utilities, or pages.
 

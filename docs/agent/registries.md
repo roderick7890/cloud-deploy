@@ -14,7 +14,6 @@ If a task follows this file, mention `Followed docs/agent/registries.md registri
 - Read the listed source file before importing a capability. Do not rely only on the summary.
 - Keep shadcn/ui wrappers under `src/components/ui`.
 - Keep shared business components under `src/components/shared` when they are broadly reusable.
-- Keep workbench-only components under `src/components/workbench` unless they become reusable across workflows.
 - Do not register page-local components here.
 
 ## Registry Status
@@ -57,7 +56,7 @@ Special shadcn entries:
 
 ## Shared Component Registry
 
-Shared components usually live in `src/components/shared`. Add a component here only when the same business behavior appears in multiple places or when it removes meaningful complexity from pages. Workbench-only reusable panes may remain in `src/components/workbench` and still be registered here because they are reusable within the workbench surface.
+Shared components usually live in `src/components/shared`. Add a component here only when the same business behavior appears in multiple places or when it removes meaningful complexity from pages.
 
 This registry is the first lookup table for reusable Cloud Deploy UI behavior. It is an index, not full component documentation.
 
@@ -70,19 +69,14 @@ The `Key Props` column is a selection aid. The component's exported props type i
 | `AppHeader` | `src/components/shared/app-header.tsx` | active | Global top bar with product name, wallet connect/profile menu, and settings trigger | `walletLabel`, `walletAddress`, `onConnectWallet`, `onCopyWalletAddress`, `onDisconnectWallet`, `onOpenSettings` | Rendering the app-level header | Uses `Button` |
 | `ProgressSteps` | `src/components/shared/progress-steps.tsx` | active | Four-step deploy progress with current step, completed states, and back navigation support | `steps`, `currentStep`, `completedSteps`, `onStepBack` | Showing the Cloud Deploy workflow | Uses `Button`, `Progress`, `Badge` |
 | `SettingsDialog` | `src/components/shared/settings-dialog.tsx` | active | Persisted settings editor for RPC endpoint and Bartender Address | `open`, `onOpenChange`, `settings`, `methodOptions`, `methodErrors`, `onSave` | Editing Cloud Deploy settings together | Uses `Dialog`, `Input`, `Button`, `Label` |
+| `ArtifactWorkspaceSidebar` | `src/components/artifact-workspace-sidebar.tsx` | active | Two-level collapsible explorer where node host and artifact reference are the displayed titles and deploy values | `workspaces`, selected ids, workspace/artifact edit and remove callbacks | Selecting OCI artifact workspaces on `/artifacts` | Uses `Button`, `Input`, `Tooltip` |
+| `ArtifactDeploySurface` | `src/components/artifact-deploy-surface.tsx` | active | Thin wrapper around OCI artifact load/deploy controls for the artifact workspace route | `source`, endpoint values, artifact state, callbacks | Rendering the right-side artifact deploy surface | Uses `OciArtifactStep` |
+| `ArtifactReviewSurface` | `src/components/artifact-review-surface.tsx` | active | Thin wrapper around legacy review output actions for artifact workspace deploy results | `buildResult`, `deployResult`, `contractAbi`, callbacks | Rendering artifact workspace deploy results | Uses `ReviewStep` |
 | `AbiMethodSelect` | `src/components/shared/abi-method-select.tsx` | active | ABI-backed method dropdown with missing-method error display | `methods`, `value`, `onValueChange`, `missingMessage` | Selecting Build Method or Deploy Method from parsed ABI options | Uses `Select`, `Label` |
 | `ConstructorParamsForm` | `src/components/shared/constructor-params-form.tsx` | active | Renders constructor inputs from ABI-derived fields and returns collected values | `constructorFields`, `values`, `onValuesChange` | A target Lyquid constructor schema must be collected | Uses `Input`, `Label` |
 | `PayloadReviewPanel` | `src/components/shared/payload-review-panel.tsx` | active | Displays hashes, prepared/deploy payload, raw JSON, copy, and download actions | `hashes`, `payload`, `onCopy`, `onDownload` | Step 3 reviews build/deploy output | Uses `Button`; raw overflow containers for JSON |
 | `ResultSummary` | `src/components/shared/result-summary.tsx` | active | Displays deploy result fields, raw response, transaction lookup state, collapsible calldata, and copyable target contract ABI | `result` | Step 4 displays deployment result | Uses `Badge`, `Button`; raw overflow containers for JSON/calldata |
-| `ProjectTree` | `src/components/project-tree.tsx` | active | Displays uploaded project paths with directory expand/collapse, optional TOML-only filtering, and optional explicit TOML target radio selection | `nodes`, `selectedTomlPath`, `sourceOnly`, `onSelectPath`, `onSelectTarget`, `showTargetSelector` | Rendering uploaded resources in legacy upload and workbench explorer | Uses `Button`; raw radio only when target selector is enabled because no shadcn radio primitive is currently installed |
-| `ResourceExplorer` | `src/components/workbench/resource-explorer.tsx` | active | Workbench folder upload, parse error dialog, TOML-only filter, resource tree, and deploy target selection | `project`, `selectedTomlPath`, `onProjectChange`, `onSelectTarget`, `onOpenFile` | Workbench resource pane | Uses `Input`, `Label`, `Button`, `Dialog`, `ProjectTree`; raw overflow container for tree |
-| `WorkbenchTabs` | `src/components/workbench/workbench-tabs.tsx` | active | Closable compiler-style tab strip and active tab content viewport | `tabs`, `activeTabId`, `onActiveTabChange`, `onCloseTab`, `renderTabContent` | Workbench output pane | Uses `Button`; raw overflow container for tab content |
-| `FileDetailTab` | `src/components/workbench/file-detail-tab.tsx` | active | Renders readonly TOML file previews and non-TOML metadata in workbench tabs | `path`, `files`, `tomlFiles` | Workbench file detail tabs | Uses `Badge`, `Textarea` |
-| `RunOutputTab` | `src/components/workbench/run-output-tab.tsx` | active | Raw-first build/deploy/history output renderer with copyable raw JSON, target contract ABI, env dialog, tx lookup pending/check state, and transaction details | `tab` | Workbench run/history tabs | Uses `Badge`, `Button`, `Dialog`; raw overflow containers for JSON |
-| `ActionDeck` | `src/components/workbench/action-deck.tsx` | active | Bottom workbench build/deploy action cards shown only after a TOML target is selected | `selectedTomlPath`, `isBuilding`, `isDeploying`, `onBuild`, `onDeploy` | Workbench action pane | Uses `Button` |
-| `DeployHistoryPanel` | `src/components/workbench/deploy-history-panel.tsx` | active | Latest 10 deploy history list that opens records by tx hash and saved env, with per-record deletion | `records`, `onOpenRecord`, `onDeleteRecord` | Workbench history pane | Uses `Button` |
-| `DeployWorkbench` | `src/components/workbench/deploy-workbench.tsx` | active | Composes the four resizable compiler workbench panes | `layout`, `onLayoutChange`, pane render props | Rendering the workbench page shell | Uses `ResizeHandle` |
-| `ResizeHandle` | `src/components/workbench/resizable-panels.tsx` | active | Pointer-driven splitter handle for workbench panes | `ariaLabel`, `orientation`, `onDrag` | Resizing workbench panes | Raw `div` with separator role |
+| `ProjectTree` | `src/components/project-tree.tsx` | active | Displays uploaded project paths with directory expand/collapse, optional TOML-only filtering, and optional explicit TOML target radio selection | `nodes`, `selectedTomlPath`, `sourceOnly`, `onSelectPath`, `onSelectTarget`, `showTargetSelector` | Rendering uploaded resources in the legacy upload flow | Uses `Button`; raw radio only when target selector is enabled because no shadcn radio primitive is currently installed |
 
 Example conflict rule:
 
@@ -109,7 +103,7 @@ The `Public API` column is a selection aid. The utility module's exported functi
 | `endpoint-utils` | `src/utils/request/endpoint-utils.ts` | active | Rewrites browser RPC requests through the Vite dev proxy only in dev builds | `getRequestEndpoint` | Request senders, Lyquid info client | Keep production RPC URLs direct; do not hard-code local RPC ports |
 | `browser-wallet-client` | `src/utils/request/browser-wallet-client.ts` | active | Wraps an injected browser wallet provider as the minimal wallet transaction client used by deploy | `createBrowserWalletTransactionClient` | Deploy page, on-chain sender | Use this when wagmi reports an account but `useWalletClient` is unavailable for a custom RPC chain |
 | `lyquid-info-client` | `src/utils/request/lyquid-info-client.ts` | active | Resolves a Lyquid ID to its deployed contract address through `GetLyquidInfo` | `fetchLyquidContractAddress` | Off-chain sender, on-chain sender | Returns `null` when the Lyquid has no visible contract; throws detailed network/RPC errors |
-| `request-dispatcher` | `src/utils/request/request-dispatcher.ts` | active | Chooses the sender for the currently selected ABI method using derived ABI transport metadata and caller-provided request context | `dispatchSelectedMethod` | Workbench page, legacy wizard | Do not duplicate sender selection in components or hard-code method names |
+| `request-dispatcher` | `src/utils/request/request-dispatcher.ts` | active | Chooses the sender for the currently selected ABI method using derived ABI transport metadata and caller-provided request context | `dispatchSelectedMethod` | Request utilities and tests | Do not duplicate sender selection in components or hard-code method names |
 | `on-chain-sender` | `src/utils/request/on-chain-sender.ts` | active | Sends ABI-encoded wallet-backed transactions for methods resolved to on-chain transport | `sendOnChainMethod` | Request dispatcher | Requires wallet/account context; keep UI and store imports out |
 | `off-chain-sender` | `src/utils/request/off-chain-sender.ts` | active | Sends ABI-selected off-chain requests through fetch/RPC context | `sendOffChainMethod` | Request dispatcher | Keep endpoint derivation and request shape centralized here |
 | `request-types` | `src/utils/request/request-types.ts` | active | Shared request sender context, result, and sender type definitions | exported request types | Request dispatcher and senders | Type-only ownership for request utilities |
@@ -117,8 +111,8 @@ The `Public API` column is a selection aid. The utility module's exported functi
 | `rpc-transaction-client` | `src/utils/request/rpc-transaction-client.ts` | active | Fetches transaction details or raw transaction lookup responses from the configured RPC by transaction hash | `fetchRpcTransaction`, `fetchRpcTransactionResponse` | On-chain sender, legacy review | Used to populate Deploy tab transaction details and expose raw lookup JSON for debugging |
 | `download-utils` | `src/utils/download-utils.ts` | active | Download JSON payloads and results from the browser | `downloadJson` | Review, Deploy | Browser-only utility |
 | `format-utils` | `src/utils/format-utils.ts` | active | Format hashes, addresses, and statuses for display | `shortHash`, `shortAddress`, `formatStatus` | UI components | Display-only; no business logic |
-| `workbench-layout-utils` | `src/utils/workbench-layout-utils.ts` | active | Pure helpers for workbench pane layout ratios | `clampRatio` | Workbench layout components | Keep non-component exports outside React component files for fast refresh |
 | `hosted-node-utils` | `src/utils/hosted-node-utils.ts` | active | Derives a node RPC endpoint from Lyquid-hosted UI hostnames on whitelisted domains | `getHostedNodeEndpoint` | Settings defaults | Keep domain whitelist in `src/config/hosted-node-config.ts`; returns empty string for non-hosted or untrusted domains |
+| `artifact-workspace-utils` | `src/utils/artifact-workspace-utils.ts` | active | Builds default node artifact workspaces, selects initial sources, links node/RPC/WS endpoint fields, formats repo references, and generates shaker push commands | `buildDefaultArtifactWorkspaces`, `getInitialArtifactSelection`, `buildWorkspaceEndpointsFromNodeHost`, `buildWorkspaceEndpointsFromRpcEndpoint`, `formatArtifactReference`, `parseArtifactReference`, `buildShakerPushCommand` | Artifact workspace route, artifact workspace store | Endpoint and repository/reference fields are both display and deploy values |
 
 ## Store Registry
 
@@ -127,8 +121,8 @@ Persistent and runtime stores live in `src/store`. Store modules own browser sta
 | Store | Path | Status | Responsibility | Public API | Used By | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `settings-store` | `src/store/settings-store.ts` | active | Persists RPC endpoint, Bartender Address, ABI, Build Method, Deploy Method, and derived ABI state | `useSettingsStore` | Settings, Build, Deploy | Only settings are persisted here |
+| `artifact-workspace-store` | `src/store/artifact-workspace-store.ts` | active | Persists artifact workspace preferences, including node workspaces, repository references, and selected source IDs | `useArtifactWorkspaceStore` | Artifact workspace route | Does not persist loaded artifacts, constructor values, build results, deploy results, or logs |
 | `deploy-session-store` | `src/store/deploy-session-store.ts` | active | Holds legacy wizard runtime upload/build/review/deploy state | `useDeploySessionStore` | Legacy wizard components | Do not persist uploaded files or run outputs |
-| `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and bounded deploy history records | `useWorkbenchStore` with layout setters and deploy history add/delete/clear actions | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
 
 ## Config Registry
 
@@ -141,13 +135,13 @@ The `Exports` column is a selection aid. The config module's actual exports are 
 | Config | Path | Status | Responsibility | Exports | Used By | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `app-config` | `src/config/app-config.ts` | active | App-level product constants | `appName` | Layout, metadata | No runtime state |
-| `routes-config` | `src/config/routes-config.ts` | active | Route paths and route labels | `routes` | Navigation, links | Includes `/` workbench and `/legacy` wizard paths; keep Vite page entry composition consistent |
+| `routes-config` | `src/config/routes-config.ts` | active | Route paths and route labels | `routes` | Navigation, links | Includes `/`, `/artifacts`, and `/legacy` |
 | `deploy-steps-config` | `src/config/deploy-steps-config.ts` | active | Upload, Build, Review, Deploy step definitions | `deploySteps` | `ProgressSteps`, pages | Do not duplicate step labels in components |
-| `storage-config` | `src/config/storage-config.ts` | active | Local storage keys and persisted store versions | `settingsStorageKey`, `settingsVersion`, `workbenchStorageKey`, `workbenchStorageVersion` | `settings-store`, `workbench-store` | Used by persisted stores only |
+| `storage-config` | `src/config/storage-config.ts` | active | Local storage keys and persisted store versions | `settingsStorageKey`, `settingsVersion`, `artifactWorkspaceStorageKey`, `artifactWorkspaceVersion` | Persisted stores | Used by persisted stores only |
 | `upload-config` | `src/config/upload-config.ts` | active | Upload limits and accepted source inputs | `acceptedProjectFormats`, `maxUploadSize` | Upload step, `file-utils` | Folder-first upload; keep UI and file handling aligned |
 | `default-settings-config` | `src/config/default-settings-config.ts` | active | Default settings shown in Settings | `defaultSettings` | `settings-store`, `SettingsDialog` | Includes empty ABI defaults for the MVP |
-| `workbench-config` | `src/config/workbench-config.ts` | active | Static workbench defaults and limits | `defaultWorkbenchLayout`, `deployHistoryLimit` | Workbench store, upload controls | No runtime state |
 | `hosted-node-config` | `src/config/hosted-node-config.ts` | active | Whitelist of hosted Lyquid domains that can imply a node endpoint from the current hostname | `hostedNodeDomains` | `hosted-node-utils` | `devnet-alpha.lyquor.dev` hostnames use `<lyquid>.<nodeid>.devnet-alpha.lyquor.dev` and derive `https://<nodeid>.devnet-alpha.lyquor.dev/api` |
+| `artifact-workspace-config` | `src/config/artifact-workspace-config.ts` | active | Default artifact sources shown in the artifact workspace tree | `defaultArtifactSources` | `artifact-workspace-utils` | Includes `lyquids/cloud-deploy:latest` and `lyquids/local:latest` |
 
 ## Type Registry
 
@@ -157,4 +151,4 @@ Reusable cross-boundary types live in `src/types`. Type modules should not impor
 | --- | --- | --- | --- | --- | --- | --- |
 | `abi-types` | `src/types/abi.ts` | active | Shared parsed ABI, method option, constructor field, and method transport types | ABI-related exported types | ABI utils, settings, UI selectors | Keep ABI source-of-truth types here when they cross utility/UI boundaries |
 | `deploy-types` | `src/types/deploy.ts` | active | Shared upload, deploy step, build result, review payload, and deploy result types | deploy workflow exported types | Legacy wizard, upload/build/review/deploy components, stores | Runtime values are not persistence permission by themselves |
-| `workbench-types` | `src/types/workbench.ts` | active | Workbench tab, environment, layout, and deploy history record types | workbench exported types | Workbench components and store | Keep persisted history shape aligned with `workbench-store` and `workbench-config` |
+| `artifact-workspace-types` | `src/types/artifact-workspace.ts` | active | Artifact workspace, source, and selection types for node/repo/reference selection | `ArtifactWorkspace`, `ArtifactSource`, `ArtifactSelection` | Artifact workspace route, store, config, utilities | Node host and repository/reference are both display and deploy source values |

@@ -135,7 +135,7 @@ function ProjectTreeNodes({
             {showTargetSelector && node.name.endsWith(targetFileExtension) ? (
               <input
                 type="radio"
-                name="workbench-target"
+                name="deploy-target"
                 className="h-4 w-4 accent-primary"
                 aria-label={`Use ${node.path} as ${targetLabel}`}
                 checked={selectedTomlPath === node.path}

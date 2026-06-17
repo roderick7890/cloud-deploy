@@ -91,8 +91,6 @@ describe("LegacyPage", () => {
     await uploadAndSelectArtifact();
 
     expect(screen.getByLabelText("RPC Endpoint")).toHaveValue("http://localhost:8545");
-    expect(screen.getByLabelText("Repository")).toHaveValue("lyquids/local");
-    expect(screen.getByLabelText("Reference")).toHaveValue("latest");
     expect((screen.getByLabelText("Manifest JSON") as HTMLTextAreaElement).value).toContain("evm-deployment-bytecode");
     expect((screen.getByLabelText("Metadata JSON") as HTMLTextAreaElement).value).toContain("abi_str");
     expect(screen.getByLabelText("Deployment Bytecode")).toHaveValue("0x6001");

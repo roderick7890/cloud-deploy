@@ -65,7 +65,7 @@ Use lowercase kebab-case for files and folders.
 
 Examples:
 
-- `workbench-settings-dialog.tsx`
+- `app-settings-dialog.tsx`
 - `settings-dialog.tsx`
 - `abi-method-select.tsx`
 - `deploy-progress.tsx`
@@ -87,7 +87,7 @@ Examples:
 - `SettingsDialog`
 - `AbiMethodSelect`
 - `ProgressSteps`
-- `DeployWorkbench`
+- `ArtifactDeploySurface`
 
 ## Directory Layout
 
@@ -291,7 +291,7 @@ Use inline errors for states the user can act on in the current form or surface:
 - upload validation failures
 - missing TOML target selection
 
-Use workbench tabs, result panels, or toast notifications for generic request failures, depending on the installed UI and workflow context:
+Use workflow panels, result panels, or toast notifications for generic request failures, depending on the installed UI and workflow context:
 
 - network failures
 - RPC errors

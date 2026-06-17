@@ -1,5 +1,5 @@
 export const routes = {
   home: "/",
-  workbench: "/workbench",
+  artifacts: "/artifacts",
   legacy: "/legacy"
 } as const;

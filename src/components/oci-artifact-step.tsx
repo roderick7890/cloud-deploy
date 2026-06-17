@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { CircleHelp, Database, LoaderCircle } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { CircleHelp, LoaderCircle } from "lucide-react";
 import type { AbiParameter } from "viem";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ type OciArtifactStepProps = {
   isDeploying?: boolean;
   isFetchingBartender?: boolean;
   constructorValues?: Record<string, string>;
+  pushCommand?: string;
   onRpcEndpointChange: (value: string) => void;
   onBartenderAddressChange: (value: string) => void;
   onRepositoryChange: (value: string) => void;
@@ -51,6 +52,7 @@ export function OciArtifactStep({
   isDeploying = false,
   isFetchingBartender = false,
   constructorValues = {},
+  pushCommand,
   onRpcEndpointChange,
   onBartenderAddressChange,
   onRepositoryChange,
@@ -61,20 +63,40 @@ export function OciArtifactStep({
   onConstructorValuesChange
 }: OciArtifactStepProps) {
   const [updateLyquidId, setUpdateLyquidId] = useState("");
+  const pushCommandRef = useRef<HTMLTextAreaElement>(null);
   const raw = getRawRecord(artifact);
   const manifestJson = jsonText(raw.manifest);
   const metadataJson = jsonText(raw.metadata);
   const contractAbiJson = artifact?.contractAbi ? jsonText(artifact.contractAbi) : "";
   const canDeploy = Boolean(artifact && bartenderAddress && !isLoading && !isDeploying);
 
+  useLayoutEffect(() => {
+    const textarea = pushCommandRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const syncHeight = () => {
+      textarea.style.height = "auto";
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    };
+
+    syncHeight();
+
+    const observer = new ResizeObserver(syncHeight);
+    observer.observe(textarea);
+
+    return () => observer.disconnect();
+  }, [pushCommand]);
+
   return (
     <div className="mx-auto flex w-full flex-col gap-5">
-      <section className="flex flex-col gap-4 rounded-md border bg-card p-4">
+      <section className="flex flex-col gap-5">
         <div className="space-y-2">
-          <div>
+          {/* <div>
             <h2 className="text-base font-semibold">Workspace</h2>
             <p className="text-sm text-muted-foreground">Shared network settings for artifact loading and deployment.</p>
-          </div>
+          </div> */}
           <div className="flex items-center justify-between gap-6">
             <div className="space-y-2 w-full">
               <Label htmlFor="oci-rpc-endpoint">RPC Endpoint</Label>
@@ -97,31 +119,54 @@ export function OciArtifactStep({
             </div>
           </div>
         </div>
+      </section>
+      <hr />
 
-        <hr className="my-4" />
-        <div className="space-y-2">
-          <div>
-            <h2 className="text-base font-semibold">Artifact Reference</h2>
-            <p className="text-sm text-muted-foreground">Repository and tag or digest inside this workspace.</p>
-          </div>
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-4 flex-1">
-              <div className="space-y-2 w-full">
-                <Label htmlFor="oci-repository">Repository</Label>
-                <Input className="w-full" id="oci-repository" value={repository} onChange={(event) => onRepositoryChange(event.target.value)} />
-              </div>
-              <div className="space-y-2 w-full">
-                <Label htmlFor="oci-reference">Reference</Label>
-                <Input className="w-full" id="oci-reference" value={reference} onChange={(event) => onReferenceChange(event.target.value)} />
-              </div>
+
+      {!artifact ? (
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 py-6 text-center">
+          {pushCommand ? (
+            <>
+              <p className="text-caption text-muted-foreground">
+                If this Cargo.toml has not been pushed yet, run this command from your Lyquid project first.
+              </p>
+              <Textarea
+                ref={pushCommandRef}
+                id="oci-push-command"
+                aria-label="Push Command"
+                value={pushCommand}
+                readOnly
+                rows={2}
+                className="w-full resize-none overflow-hidden border-0 bg-muted font-mono text-caption text-muted-foreground shadow-none focus-visible:ring-0"
+              />
+              <p className="text-caption text-muted-foreground mt-6">
+                Then fill in the repository and reference below to load the pushed artifact.
+              </p>
+            </>
+          ) : null}
+
+          <div className="grid w-full gap-2 text-left md:grid-cols-2">
+            <div className="space-y-1">
+              <Label htmlFor="oci-repository" className="text-caption text-muted-foreground">Repository</Label>
+              <Input className="w-full" id="oci-repository" value={repository} onChange={(event) => onRepositoryChange(event.target.value)} />
             </div>
-            <Button type="button" className="sm:self-end" disabled={isLoading || !rpcEndpoint || !repository || !reference} onClick={onLoad}>
-              {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <Database className="size-4" />}
-              Load Artifact
-            </Button>
+            <div className="space-y-1">
+              <Label htmlFor="oci-reference" className="text-caption text-muted-foreground">Reference</Label>
+              <Input className="w-full" id="oci-reference" value={reference} onChange={(event) => onReferenceChange(event.target.value)} />
+            </div>
+          </div>
+
+          <div className="flex w-full justify-center mt-6">
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-caption text-muted-foreground">Load the artifact after repository and reference are set.</p>
+              <Button type="button" disabled={isLoading || !rpcEndpoint || !repository || !reference} onClick={onLoad}>
+                {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                Load Artifact
+              </Button>
+            </div>
           </div>
         </div>
-      </section>
+      ) : null}
 
       {artifact ? (
         <div className="flex  gap-4">

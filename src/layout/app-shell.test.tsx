@@ -26,7 +26,7 @@ describe("AppShell", () => {
     expect(screen.getByText("Upload content")).toBeInTheDocument();
   });
 
-  it("can render without progress navigation for workbench mode", () => {
+  it("can render without progress navigation for artifact workspace mode", () => {
     renderWithProviders(
       <AppShell
         walletLabel="Connect Wallet"
@@ -35,11 +35,11 @@ describe("AppShell", () => {
         onDisconnectWallet={vi.fn()}
         onOpenSettings={vi.fn()}
       >
-        <p>Workbench body</p>
+        <p>Artifact workspace body</p>
       </AppShell>
     );
 
-    expect(screen.getByText("Workbench body")).toBeInTheDocument();
+    expect(screen.getByText("Artifact workspace body")).toBeInTheDocument();
     expect(screen.queryByText(deploySteps[0].label)).not.toBeInTheDocument();
   });
 });

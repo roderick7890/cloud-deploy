@@ -1,12 +1,12 @@
 import { SettingsDialog } from "@/components/shared/settings-dialog";
 import { useSettingsStore } from "@/store/settings-store";
 
-type WorkbenchSettingsDialogProps = {
+type AppSettingsDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-export function WorkbenchSettingsDialog({ open, onOpenChange }: WorkbenchSettingsDialogProps) {
+export function AppSettingsDialog({ open, onOpenChange }: AppSettingsDialogProps) {
   const settings = useSettingsStore();
 
   return (
