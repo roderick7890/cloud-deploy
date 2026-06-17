@@ -165,8 +165,8 @@ export function OciArtifactStep({
         <div className="mx-auto flex w-full max-w-3xl flex-col items-center gap-3 py-6 text-center">
           {pushCommand ? (
             <>
-              <p className="text-caption text-muted-foreground">
-                If this Cargo.toml has not been pushed yet, run this command from your Lyquid project first.
+              <p className="text-caption text-muted-foreground font-medium">
+                1. If this Cargo.toml has not been pushed yet, run this command from your Lyquid project first.
               </p>
               <Textarea
                 ref={pushCommandRef}
@@ -177,8 +177,8 @@ export function OciArtifactStep({
                 rows={2}
                 className="w-full resize-none overflow-hidden border-0 bg-muted font-mono text-caption text-muted-foreground shadow-none focus-visible:ring-0"
               />
-              <p className="text-caption text-muted-foreground mt-6">
-                Then fill in the repository and reference below to load the pushed artifact.
+              <p className="text-caption text-muted-foreground mt-6 font-medium">
+                2. Then fill in the repository and reference below to load the pushed artifact.
               </p>
             </>
           ) : null}
@@ -196,7 +196,7 @@ export function OciArtifactStep({
 
           <div className="flex w-full justify-center mt-6">
             <div className="flex flex-col items-center gap-2">
-              <p className="text-caption text-muted-foreground">Load the artifact after repository and reference are set.</p>
+              <p className="text-caption text-muted-foreground font-medium">3. Load the artifact after repository and reference are set.</p>
               <Button type="button" disabled={isLoading || !rpcEndpoint || !repository || !reference} onClick={onLoad}>
                 {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : null}
                 Load Artifact
