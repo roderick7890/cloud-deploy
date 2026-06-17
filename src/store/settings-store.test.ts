@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { lyquidTestAbi } from "@/test/test-abi";
-import { useSettingsStore } from "./settings-store";
+import { getInitialSettings, useSettingsStore } from "./settings-store";
 
 describe("settings-store", () => {
   beforeEach(() => {
@@ -12,7 +12,6 @@ describe("settings-store", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
       bartenderAddress: "0x0000000000000000000000000000000000000001",
-      lyquidId: "lyquid-1",
       abi: lyquidTestAbi,
       buildMethod: "compileProject(bytes)",
       deployMethod: "publishProject(bytes)"
@@ -29,7 +28,6 @@ describe("settings-store", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
       bartenderAddress: "",
-      lyquidId: "",
       abi: lyquidTestAbi,
       buildMethod: "compileProject(bytes)",
       deployMethod: "publishProject(bytes)"
@@ -38,7 +36,6 @@ describe("settings-store", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
       bartenderAddress: "",
-      lyquidId: "",
       abi: "[]",
       buildMethod: "compileProject(bytes)",
       deployMethod: "publishProject(bytes)"
@@ -54,12 +51,28 @@ describe("settings-store", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "",
       bartenderAddress: "",
-      lyquidId: "",
       abi: lyquidTestAbi,
       buildMethod: "",
       deployMethod: ""
     });
 
     expect(useSettingsStore.getState().methodOptions.map((option) => option.value)).toContain("compileProject(bytes)");
+  });
+
+  it("uses the hosted devnet node endpoint when no endpoint is persisted", () => {
+    expect(
+      getInitialSettings(
+        {
+          rpcEndpoint: "",
+          bartenderAddress: "",
+          abi: "[]",
+          buildMethod: "",
+          deployMethod: ""
+        },
+        "ss7x5edzcxjszfykf3edlyl44etxn256htzqa.2folhfgf4kuyfdenaq3l4dnamv7yxrnqq3zbp64thfa5esqgxhv6wzqa.devnet-alpha.lyquor.dev"
+      ).rpcEndpoint
+    ).toBe(
+      "https://2folhfgf4kuyfdenaq3l4dnamv7yxrnqq3zbp64thfa5esqgxhv6wzqa.devnet-alpha.lyquor.dev/api"
+    );
   });
 });

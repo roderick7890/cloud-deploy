@@ -81,7 +81,6 @@ describe("LegacyPage", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
       bartenderAddress: "0x0000000000000000000000000000000000000001",
-      lyquidId: "",
       abi: "[]",
       buildMethod: "",
       deployMethod: ""
@@ -135,6 +134,7 @@ describe("LegacyPage", () => {
       expect(sendLyquidDeploymentMock).toHaveBeenCalledWith(
         expect.objectContaining({
           bartenderAddress: "0x0000000000000000000000000000000000000001",
+          updateLyquidId: undefined,
           constructorValues: { greeting: "hello" },
           context: expect.objectContaining({
             rpcEndpoint: "http://localhost:8545",
@@ -145,5 +145,28 @@ describe("LegacyPage", () => {
     });
     expect(await screen.findByText(transactionHash)).toBeInTheDocument();
     expect((screen.getByLabelText("Deploy transaction JSON") as HTMLTextAreaElement).value).toContain('"contractAddress"');
+  });
+
+  it("passes the optional update Lyquid ID to deployment", async () => {
+    accountAddressMock.value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+    sendLyquidDeploymentMock.mockResolvedValue({
+      transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
+      contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788",
+      lyquidId: "Lyquid-demo",
+      status: "success",
+      receipt: { transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318", status: "0x1", contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788" }
+    });
+    const user = await uploadAndSelectArtifact();
+
+    await user.type(screen.getByLabelText("Update to (optional)"), "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa");
+    await user.click(screen.getByRole("button", { name: "Deploy" }));
+
+    await waitFor(() => {
+      expect(sendLyquidDeploymentMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          updateLyquidId: "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa"
+        })
+      );
+    });
   });
 });

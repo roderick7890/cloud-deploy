@@ -1,10 +1,12 @@
-import { Database, LoaderCircle } from "lucide-react";
+import { useState } from "react";
+import { CircleHelp, Database, LoaderCircle } from "lucide-react";
 import type { AbiParameter } from "viem";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { LyquidDeploymentArtifact } from "@/utils/lyquid-deployment-artifact";
 
 type OciArtifactStepProps = {
@@ -23,7 +25,7 @@ type OciArtifactStepProps = {
   onReferenceChange: (value: string) => void;
   onFetchBartender: () => void;
   onLoad: () => void;
-  onDeploy: () => void;
+  onDeploy: (updateLyquidId?: string) => void;
   onConstructorValuesChange?: (values: Record<string, string>) => void;
 };
 
@@ -58,6 +60,7 @@ export function OciArtifactStep({
   onDeploy,
   onConstructorValuesChange
 }: OciArtifactStepProps) {
+  const [updateLyquidId, setUpdateLyquidId] = useState("");
   const raw = getRawRecord(artifact);
   const manifestJson = jsonText(raw.manifest);
   const metadataJson = jsonText(raw.metadata);
@@ -164,8 +167,32 @@ export function OciArtifactStep({
                 rows={12}
                 className="w-full font-mono"
               />
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="oci-update-lyquid-id">Update to (optional)</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button className="size-6" type="button" variant="ghost" size="icon" aria-label="Explain update deployment">
+                          <CircleHelp className="size-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        Fill a Lyquid ID to update that existing Lyquid. Cloud Deploy uses the node update path, but does not verify this code matches the target. Check it yourself before deploying.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <Input
+                  className="w-full"
+                  id="oci-update-lyquid-id"
+                  value={updateLyquidId}
+                  placeholder="Lyquid-*"
+                  onChange={(event) => setUpdateLyquidId(event.target.value)}
+                />
+              </div>
               <div className="flex justify-end">
-                <Button type="button" disabled={!canDeploy} onClick={onDeploy} className="mt-4">
+                <Button type="button" disabled={!canDeploy} onClick={() => onDeploy(updateLyquidId.trim() || undefined)} className="mt-4">
                   {isDeploying ? "Deploying..." : "Deploy"}
                 </Button>
               </div>

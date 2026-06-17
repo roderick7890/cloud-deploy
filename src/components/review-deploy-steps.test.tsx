@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders } from "@/test/render";
 import { DeployStep } from "./deploy-step";
+import { OciArtifactStep } from "./oci-artifact-step";
 import { ReviewStep } from "./review-step";
 
 describe("ReviewStep and DeployStep", () => {
@@ -128,5 +129,41 @@ describe("ReviewStep and DeployStep", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
 
     expect(onBack).toHaveBeenCalledOnce();
+  });
+
+  it("sends the optional update Lyquid ID from the artifact deploy panel", async () => {
+    const user = userEvent.setup();
+    const onDeploy = vi.fn();
+
+    renderWithProviders(
+      <OciArtifactStep
+        rpcEndpoint="https://node.example/api"
+        bartenderAddress="0x0000000000000000000000000000000000000001"
+        repository="lyquids/cloud-deploy"
+        reference="latest"
+        artifact={{
+          name: "cloud-deploy",
+          deploymentBytecode: "0x6001",
+          imageHash: `0x${"1".repeat(64)}`,
+          repoHint: "node.example/lyquids/cloud-deploy:latest",
+          abiStr: "",
+          constructorParameters: [],
+          deps: [],
+          raw: {}
+        }}
+        onRpcEndpointChange={vi.fn()}
+        onBartenderAddressChange={vi.fn()}
+        onRepositoryChange={vi.fn()}
+        onReferenceChange={vi.fn()}
+        onFetchBartender={vi.fn()}
+        onLoad={vi.fn()}
+        onDeploy={onDeploy}
+      />
+    );
+
+    await user.type(screen.getByLabelText("Update to (optional)"), "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa");
+    await user.click(screen.getByRole("button", { name: "Deploy" }));
+
+    expect(onDeploy).toHaveBeenCalledWith("Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa");
   });
 });

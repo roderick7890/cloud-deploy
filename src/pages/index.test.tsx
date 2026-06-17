@@ -66,7 +66,6 @@ describe("HomePage", () => {
     useSettingsStore.getState().saveSettings({
       rpcEndpoint: "http://localhost:8545",
       bartenderAddress: "0x0000000000000000000000000000000000000001",
-      lyquidId: "",
       abi: "[]",
       buildMethod: "",
       deployMethod: ""

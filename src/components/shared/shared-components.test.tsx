@@ -62,7 +62,7 @@ describe("shared components", () => {
       <SettingsDialog
         open
         onOpenChange={vi.fn()}
-        settings={{ rpcEndpoint: "", bartenderAddress: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
+        settings={{ rpcEndpoint: "", bartenderAddress: "", abi: "[]", buildMethod: "", deployMethod: "" }}
         onSave={onSave}
       />
     );
@@ -84,7 +84,7 @@ describe("shared components", () => {
       <SettingsDialog
         open
         onOpenChange={vi.fn()}
-        settings={{ rpcEndpoint: "", bartenderAddress: "", lyquidId: "", abi: "[]", buildMethod: "", deployMethod: "" }}
+        settings={{ rpcEndpoint: "", bartenderAddress: "", abi: "[]", buildMethod: "", deployMethod: "" }}
         onSave={vi.fn()}
       />
     );

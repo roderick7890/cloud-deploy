@@ -16,7 +16,6 @@ export function WorkbenchSettingsDialog({ open, onOpenChange }: WorkbenchSetting
       settings={{
         rpcEndpoint: settings.rpcEndpoint,
         bartenderAddress: settings.bartenderAddress,
-        lyquidId: settings.lyquidId,
         abi: settings.abi,
         buildMethod: settings.buildMethod,
         deployMethod: settings.deployMethod

@@ -49,6 +49,7 @@ export function parseDeployArgs(argv) {
   const options = {
     endpoint: "",
     reference: "",
+    update: "",
     debug: false,
     extraArgs: []
   };
@@ -73,6 +74,8 @@ export function parseDeployArgs(argv) {
           index += 1;
         }
       }
+    } else if (arg === "--update") {
+      options.update = argv[++index] ?? "";
     } else if (arg === "--debug") {
       options.debug = true;
     } else {
@@ -98,6 +101,10 @@ export function buildDeployCommand(options, manifest = manifestPath, command = r
 
   if (options.debug) {
     args.push("--debug");
+  }
+
+  if (options.update) {
+    args.push("--update", options.update);
   }
 
   args.push(...options.extraArgs, manifest);
@@ -145,7 +152,7 @@ async function main() {
     return;
   }
 
-  throw new Error("Usage: lyquid-workflow.mjs build | deploy --endpoint <ws-url> [--reference <oci-ref>] [--debug]");
+  throw new Error("Usage: lyquid-workflow.mjs build | deploy --endpoint <ws-url> [--reference <oci-ref>] [--update <lyquid-id>] [--debug]");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

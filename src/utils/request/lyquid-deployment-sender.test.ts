@@ -88,4 +88,104 @@ describe("lyquid-deployment-sender", () => {
     );
     expect(switchChain).toHaveBeenCalledWith({ id: 31337 });
   });
+
+  it("resolves the previous contract and marks the deployment as an update", async () => {
+    const artifact = parseLyquidDeploymentArtifact({
+      name: "counter",
+      deploymentBytecode: "0x60016002",
+      imageHash: `0x${"d".repeat(64)}`,
+      repoHint: "registry.local/counter:latest",
+      abiStr: ""
+    });
+    const previousContract = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+    const sendTransaction = vi.fn().mockResolvedValue("0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318");
+    const offChainFetch = vi.fn().mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+
+      if (url === "http://127.0.0.1:10087/api") {
+        if (body.method === "eth_chainId") {
+          return Promise.resolve(jsonResponse({ jsonrpc: "2.0", id: "chain-id", result: "0x7a69" }));
+        }
+
+        if (body.method === "eth_getTransactionReceipt") {
+          return Promise.resolve(
+            jsonResponse({
+              jsonrpc: "2.0",
+              id: "receipt",
+              result: {
+                transactionHash: "0x8d829216d0bb9e030e2f49f861733855b9cd5ca9709294287419a8787199b318",
+                status: "0x1",
+                contractAddress: "0x610178dA211FEF7D417bC0e6FeD39F05609AD788"
+              }
+            })
+          );
+        }
+      }
+
+      if (url.includes("GetLyquidInfo")) {
+        return Promise.resolve(jsonResponse({ lyquidInfo: { contract: { value: previousContract } } }));
+      }
+
+      if (url.includes("GetLyquidByAddress")) {
+        return Promise.resolve(jsonResponse({ lyquidId: { value: "Lyquid-counter" } }));
+      }
+
+      throw new Error(`Unexpected request ${url}`);
+    });
+    const context = createRequestSenderContext({
+      rpcEndpoint: "http://127.0.0.1:10087/api",
+      accountAddress: "0x1111111111111111111111111111111111111111",
+      walletClient: { sendTransaction },
+      offChainFetch
+    });
+
+    await expect(
+      sendLyquidDeployment({
+        artifact,
+        bartenderAddress: "0x0000000000000000000000000000000000000001",
+        updateLyquidId: "Lyquid-counter",
+        context,
+        receiptPollIntervalMs: 1,
+        receiptTimeoutMs: 50
+      })
+    ).resolves.toMatchObject({
+      mode: "update",
+      updateLyquidId: "Lyquid-counter",
+      supersededContract: previousContract,
+      submittedTransaction: expect.objectContaining({
+        superseded: previousContract
+      })
+    });
+  });
+
+  it("rejects non-Lyquid update targets before sending network requests", async () => {
+    const artifact = parseLyquidDeploymentArtifact({
+      name: "counter",
+      deploymentBytecode: "0x60016002",
+      imageHash: `0x${"e".repeat(64)}`,
+      repoHint: "registry.local/counter:latest",
+      abiStr: ""
+    });
+    const sendTransaction = vi.fn();
+    const offChainFetch = vi.fn();
+    const context = createRequestSenderContext({
+      rpcEndpoint: "http://127.0.0.1:10087/api",
+      accountAddress: "0x1111111111111111111111111111111111111111",
+      walletClient: { sendTransaction },
+      offChainFetch
+    });
+
+    await expect(
+      sendLyquidDeployment({
+        artifact,
+        bartenderAddress: "0x0000000000000000000000000000000000000001",
+        updateLyquidId: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        context
+      })
+    ).rejects.toThrow("Update target must be a Lyquid ID starting with Lyquid-.");
+
+    expect(offChainFetch).not.toHaveBeenCalled();
+    expect(sendTransaction).not.toHaveBeenCalled();
+  });
 });

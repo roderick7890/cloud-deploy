@@ -129,7 +129,7 @@ Cloud Deploy has durable settings and runtime deployment session state.
 Persisted settings belong in `src/store/settings-store.ts` and should stay limited to:
 
 - `rpcEndpoint`
-- `lyquidId`
+- `bartenderAddress`
 - `abi`
 - `buildMethod`
 - `deployMethod`

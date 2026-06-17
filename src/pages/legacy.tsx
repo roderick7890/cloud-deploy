@@ -51,7 +51,6 @@ export default function LegacyPage() {
     settings.saveSettings({
       rpcEndpoint: values.rpcEndpoint ?? settings.rpcEndpoint,
       bartenderAddress: values.bartenderAddress ?? settings.bartenderAddress,
-      lyquidId: settings.lyquidId,
       abi: settings.abi,
       buildMethod: settings.buildMethod,
       deployMethod: settings.deployMethod
@@ -98,7 +97,7 @@ export default function LegacyPage() {
     return result;
   };
 
-  const handleDeploy = async () => {
+  const handleDeploy = async (updateLyquidId?: string) => {
     setDeployResult(null);
     setCurrentError(null);
     const prepared = buildResult ?? prepareDeploymentData();
@@ -118,6 +117,7 @@ export default function LegacyPage() {
       const raw = await sendLyquidDeployment({
         artifact: selectedArtifact,
         bartenderAddress: settings.bartenderAddress,
+        updateLyquidId,
         constructorValues,
         context: createRequestSenderContext({
           rpcEndpoint: settings.rpcEndpoint,
@@ -223,7 +223,7 @@ export default function LegacyPage() {
           isWalletConnected={Boolean(account.address)}
           currentError={currentError}
           onBack={() => setCurrentStep("upload")}
-          onDeploy={handleDeploy}
+          onDeploy={() => void handleDeploy()}
           onConnectWallet={connectWallet}
           onCopyBuild={() => navigator.clipboard.writeText(JSON.stringify(buildResult?.payload ?? buildResult?.raw ?? {}, null, 2))}
           onDownloadBuild={() => downloadJson("cloud-deploy-deployment-data.json", buildResult?.payload ?? buildResult?.raw ?? {})}

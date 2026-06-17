@@ -31,6 +31,29 @@ describe("lyquid workflow", () => {
     });
   });
 
+  it("passes update Lyquid ID when provided", () => {
+    const options = parseDeployArgs([
+      "--endpoint",
+      "wss://node.example/ws",
+      "--update",
+      "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa"
+    ]);
+
+    expect(buildDeployCommand(options, "/repo/lyquid/Cargo.toml", "shaker")).toEqual({
+      command: "shaker",
+      args: [
+        "deploy",
+        "--endpoint",
+        "wss://node.example/ws",
+        "--output",
+        "json",
+        "--update",
+        "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa",
+        "/repo/lyquid/Cargo.toml"
+      ]
+    });
+  });
+
   it("omits the OCI reference argument when reference is empty", () => {
     const options = parseDeployArgs(["--endpoint", "wss://node.example/ws", "--reference", ""]);
 

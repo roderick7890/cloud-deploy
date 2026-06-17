@@ -69,7 +69,7 @@ The `Key Props` column is a selection aid. The component's exported props type i
 | --- | --- | --- | --- | --- | --- | --- |
 | `AppHeader` | `src/components/shared/app-header.tsx` | active | Global top bar with product name, wallet connect/profile menu, and settings trigger | `walletLabel`, `walletAddress`, `onConnectWallet`, `onCopyWalletAddress`, `onDisconnectWallet`, `onOpenSettings` | Rendering the app-level header | Uses `Button` |
 | `ProgressSteps` | `src/components/shared/progress-steps.tsx` | active | Four-step deploy progress with current step, completed states, and back navigation support | `steps`, `currentStep`, `completedSteps`, `onStepBack` | Showing the Cloud Deploy workflow | Uses `Button`, `Progress`, `Badge` |
-| `SettingsDialog` | `src/components/shared/settings-dialog.tsx` | active | Persisted settings editor for RPC endpoint, Lyquid ID, ABI, Build Method, and Deploy Method | `open`, `onOpenChange`, `settings`, `methodOptions`, `methodErrors`, `onSave` | Editing Cloud Deploy settings together | Uses `Dialog`, `Input`, `Textarea`, `Select`, `Button`, `Label` |
+| `SettingsDialog` | `src/components/shared/settings-dialog.tsx` | active | Persisted settings editor for RPC endpoint and Bartender Address | `open`, `onOpenChange`, `settings`, `methodOptions`, `methodErrors`, `onSave` | Editing Cloud Deploy settings together | Uses `Dialog`, `Input`, `Button`, `Label` |
 | `AbiMethodSelect` | `src/components/shared/abi-method-select.tsx` | active | ABI-backed method dropdown with missing-method error display | `methods`, `value`, `onValueChange`, `missingMessage` | Selecting Build Method or Deploy Method from parsed ABI options | Uses `Select`, `Label` |
 | `ConstructorParamsForm` | `src/components/shared/constructor-params-form.tsx` | active | Renders constructor inputs from ABI-derived fields and returns collected values | `constructorFields`, `values`, `onValuesChange` | A target Lyquid constructor schema must be collected | Uses `Input`, `Label` |
 | `PayloadReviewPanel` | `src/components/shared/payload-review-panel.tsx` | active | Displays hashes, prepared/deploy payload, raw JSON, copy, and download actions | `hashes`, `payload`, `onCopy`, `onDownload` | Step 3 reviews build/deploy output | Uses `Button`; raw overflow containers for JSON |
@@ -118,6 +118,7 @@ The `Public API` column is a selection aid. The utility module's exported functi
 | `download-utils` | `src/utils/download-utils.ts` | active | Download JSON payloads and results from the browser | `downloadJson` | Review, Deploy | Browser-only utility |
 | `format-utils` | `src/utils/format-utils.ts` | active | Format hashes, addresses, and statuses for display | `shortHash`, `shortAddress`, `formatStatus` | UI components | Display-only; no business logic |
 | `workbench-layout-utils` | `src/utils/workbench-layout-utils.ts` | active | Pure helpers for workbench pane layout ratios | `clampRatio` | Workbench layout components | Keep non-component exports outside React component files for fast refresh |
+| `hosted-node-utils` | `src/utils/hosted-node-utils.ts` | active | Derives a node RPC endpoint from Lyquid-hosted UI hostnames on whitelisted domains | `getHostedNodeEndpoint` | Settings defaults | Keep domain whitelist in `src/config/hosted-node-config.ts`; returns empty string for non-hosted or untrusted domains |
 
 ## Store Registry
 
@@ -125,7 +126,7 @@ Persistent and runtime stores live in `src/store`. Store modules own browser sta
 
 | Store | Path | Status | Responsibility | Public API | Used By | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| `settings-store` | `src/store/settings-store.ts` | active | Persists RPC endpoint, Lyquid ID, ABI, Build Method, Deploy Method, and derived ABI state | `useSettingsStore` | Settings, Build, Deploy | Only settings are persisted here |
+| `settings-store` | `src/store/settings-store.ts` | active | Persists RPC endpoint, Bartender Address, ABI, Build Method, Deploy Method, and derived ABI state | `useSettingsStore` | Settings, Build, Deploy | Only settings are persisted here |
 | `deploy-session-store` | `src/store/deploy-session-store.ts` | active | Holds legacy wizard runtime upload/build/review/deploy state | `useDeploySessionStore` | Legacy wizard components | Do not persist uploaded files or run outputs |
 | `workbench-store` | `src/store/workbench-store.ts` | active | Persists compiler workbench layout ratios and bounded deploy history records | `useWorkbenchStore` with layout setters and deploy history add/delete/clear actions | Workbench page | Does not persist uploaded files, current tabs, build payloads, tx details, or run raw output |
 
@@ -146,6 +147,7 @@ The `Exports` column is a selection aid. The config module's actual exports are 
 | `upload-config` | `src/config/upload-config.ts` | active | Upload limits and accepted source inputs | `acceptedProjectFormats`, `maxUploadSize` | Upload step, `file-utils` | Folder-first upload; keep UI and file handling aligned |
 | `default-settings-config` | `src/config/default-settings-config.ts` | active | Default settings shown in Settings | `defaultSettings` | `settings-store`, `SettingsDialog` | Includes empty ABI defaults for the MVP |
 | `workbench-config` | `src/config/workbench-config.ts` | active | Static workbench defaults and limits | `defaultWorkbenchLayout`, `deployHistoryLimit` | Workbench store, upload controls | No runtime state |
+| `hosted-node-config` | `src/config/hosted-node-config.ts` | active | Whitelist of hosted Lyquid domains that can imply a node endpoint from the current hostname | `hostedNodeDomains` | `hosted-node-utils` | `devnet-alpha.lyquor.dev` hostnames use `<lyquid>.<nodeid>.devnet-alpha.lyquor.dev` and derive `https://<nodeid>.devnet-alpha.lyquor.dev/api` |
 
 ## Type Registry
 

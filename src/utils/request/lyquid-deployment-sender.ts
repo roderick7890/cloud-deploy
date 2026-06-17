@@ -1,6 +1,6 @@
 import { getAddress, isAddress, type Chain } from "viem";
 import { buildLyquidDeploymentTransaction, type LyquidDeploymentArtifact } from "@/utils/lyquid-deployment-artifact";
-import { fetchLyquidIdByAddress } from "./lyquid-info-client";
+import { fetchLyquidContractAddress, fetchLyquidIdByAddress } from "./lyquid-info-client";
 import { fetchRpcChain } from "./rpc-chain-client";
 import { waitForRpcTransactionReceipt } from "./rpc-transaction-client";
 import type { RequestSenderContext, WalletTransactionClient } from "./request-types";
@@ -8,6 +8,7 @@ import type { RequestSenderContext, WalletTransactionClient } from "./request-ty
 type SendLyquidDeploymentInput = {
   artifact: LyquidDeploymentArtifact;
   bartenderAddress: string;
+  updateLyquidId?: string;
   constructorValues?: Record<string, string>;
   context: RequestSenderContext;
   receiptPollIntervalMs?: number;
@@ -68,9 +69,20 @@ function getReceiptStatus(receipt: unknown) {
   return typeof status === "string" && status.length > 0 ? status : "submitted";
 }
 
+function normalizeUpdateLyquidId(updateLyquidId?: string) {
+  const trimmedUpdateLyquidId = updateLyquidId?.trim() ?? "";
+
+  if (trimmedUpdateLyquidId && !trimmedUpdateLyquidId.startsWith("Lyquid-")) {
+    throw new Error("Update target must be a Lyquid ID starting with Lyquid-.");
+  }
+
+  return trimmedUpdateLyquidId;
+}
+
 export async function sendLyquidDeployment({
   artifact,
   bartenderAddress,
+  updateLyquidId,
   constructorValues,
   context,
   receiptPollIntervalMs,
@@ -88,12 +100,24 @@ export async function sendLyquidDeployment({
     throw new Error("Wallet client is required.");
   }
 
+  const trimmedUpdateLyquidId = normalizeUpdateLyquidId(updateLyquidId);
   const chain = await fetchRpcChain({
     rpcEndpoint: context.rpcEndpoint,
     rpcTransport: context.rpcTransport
   });
+  const supersededContract = trimmedUpdateLyquidId
+    ? await fetchLyquidContractAddress({
+        serviceTransport: context.serviceTransport,
+        lyquidId: trimmedUpdateLyquidId
+      })
+    : null;
+
+  if (trimmedUpdateLyquidId && !supersededContract) {
+    throw new Error("Update Lyquid ID is not deployed or not visible to this node.");
+  }
+
   const deploymentTransaction = buildLyquidDeploymentTransaction({
-    artifact,
+    artifact: supersededContract ? { ...artifact, superseded: supersededContract } : artifact,
     bartenderAddress,
     constructorValues
   });
@@ -137,8 +161,14 @@ export async function sendLyquidDeployment({
     lyquidIdLookupError,
     chainId: chain.id,
     status: getReceiptStatus(receipt),
+    mode: supersededContract ? "update" : "create",
+    updateLyquidId: trimmedUpdateLyquidId || undefined,
+    supersededContract: supersededContract ?? undefined,
     receipt,
     data: deploymentTransaction.data,
-    submittedTransaction: deploymentTransaction.submittedTransaction
+    submittedTransaction: {
+      ...deploymentTransaction.submittedTransaction,
+      superseded: supersededContract ?? undefined
+    }
   };
 }
