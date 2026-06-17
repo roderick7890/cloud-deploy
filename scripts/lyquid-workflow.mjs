@@ -74,6 +74,8 @@ export function parseDeployArgs(argv) {
           index += 1;
         }
       }
+    } else if (arg === "--registry") {
+      options.reference = argv[++index] ?? "";
     } else if (arg === "--update") {
       options.update = argv[++index] ?? "";
     } else if (arg === "--debug") {
@@ -105,6 +107,22 @@ export function buildDeployCommand(options, manifest = manifestPath, command = r
 
   if (options.update) {
     args.push("--update", options.update);
+  }
+
+  args.push(...options.extraArgs, manifest);
+
+  return { command, args };
+}
+
+export function buildPushCommand(options, manifest = manifestPath, command = resolveShakerCommand()) {
+  const args = ["push", "--endpoint", options.endpoint];
+
+  if (options.reference) {
+    args.push("--registry", options.reference);
+  }
+
+  if (options.debug) {
+    args.push("--debug");
   }
 
   args.push(...options.extraArgs, manifest);
@@ -152,7 +170,15 @@ async function main() {
     return;
   }
 
-  throw new Error("Usage: lyquid-workflow.mjs build | deploy --endpoint <ws-url> [--reference <oci-ref>] [--update <lyquid-id>] [--debug]");
+  if (command === "push") {
+    await syncLyquidAssets();
+    const push = buildPushCommand(parseDeployArgs(args));
+    console.log(`Running: ${push.command} ${push.args.map((arg) => JSON.stringify(arg)).join(" ")}`);
+    run(push.command, push.args);
+    return;
+  }
+
+  throw new Error("Usage: lyquid-workflow.mjs build | push --endpoint <ws-url> [--registry <oci-ref>] [--debug] | deploy --endpoint <ws-url> [--reference <oci-ref>] [--update <lyquid-id>] [--debug]");
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

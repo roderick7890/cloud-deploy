@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:lyquid": "node scripts/lyquid-workflow.mjs build",
+    "push:lyquid": "node scripts/lyquid-workflow.mjs push",
     "deploy:lyquid": "node scripts/lyquid-workflow.mjs deploy",
     "start": "vite preview",
     "lint": "eslint .",

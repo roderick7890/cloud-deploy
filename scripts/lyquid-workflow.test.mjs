@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDeployCommand, resolveShakerCommand, parseDeployArgs } from "./lyquid-workflow.mjs";
+import { buildDeployCommand, buildPushCommand, resolveShakerCommand, parseDeployArgs } from "./lyquid-workflow.mjs";
 
 describe("lyquid workflow", () => {
   it("requires an endpoint before deploying", () => {
@@ -49,6 +49,22 @@ describe("lyquid workflow", () => {
         "json",
         "--update",
         "Lyquid-ss7x5edzcxjszfykf3edlyl44etxn256htzqa",
+        "/repo/lyquid/Cargo.toml"
+      ]
+    });
+  });
+
+  it("builds a shaker push command without deploying", () => {
+    const options = parseDeployArgs(["--endpoint", "wss://node.example/ws", "--registry", "https://node.example/lyquids/cloud-deploy:latest"]);
+
+    expect(buildPushCommand(options, "/repo/lyquid/Cargo.toml", "shaker")).toEqual({
+      command: "shaker",
+      args: [
+        "push",
+        "--endpoint",
+        "wss://node.example/ws",
+        "--registry",
+        "https://node.example/lyquids/cloud-deploy:latest",
         "/repo/lyquid/Cargo.toml"
       ]
     });
