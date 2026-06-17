@@ -191,11 +191,6 @@ export function OciArtifactStep({
                   onChange={(event) => setUpdateLyquidId(event.target.value)}
                 />
               </div>
-              <div className="flex justify-end">
-                <Button type="button" disabled={!canDeploy} onClick={() => onDeploy(updateLyquidId.trim() || undefined)} className="mt-4">
-                  {isDeploying ? "Deploying..." : "Deploy"}
-                </Button>
-              </div>
             </div>
 
             {contractAbiJson ? (
@@ -216,6 +211,7 @@ export function OciArtifactStep({
                       <Label htmlFor={`oci-constructor-${name}`}>{name}</Label>
                       <Input
                         id={`oci-constructor-${name}`}
+                        className="w-full"
                         value={constructorValues[name] ?? ""}
                         placeholder={field.type}
                         onChange={(event) => onConstructorValuesChange?.({ ...constructorValues, [name]: event.target.value })}
@@ -225,6 +221,12 @@ export function OciArtifactStep({
                 })}
               </div>
             ) : null}
+
+            <div className="flex justify-end">
+              <Button type="button" disabled={!canDeploy} onClick={() => onDeploy(updateLyquidId.trim() || undefined)} className="mt-4">
+                {isDeploying ? "Deploying..." : "Deploy"}
+              </Button>
+            </div>
           </section>
         </div>
       ) : null}
