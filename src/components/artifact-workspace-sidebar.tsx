@@ -217,7 +217,7 @@ export function ArtifactWorkspaceSidebar({
                 </Button>
                 {workspaceEditing ? (
                   <InlineEdit
-                    value={workspace.nodeHost}
+                    value={workspace.rpcEndpoint}
                     ariaLabel="Workspace node host"
                     onCommit={(value) => {
                       onWorkspaceHostChange(workspace.id, value);
@@ -232,7 +232,7 @@ export function ArtifactWorkspaceSidebar({
                     className="h-auto min-w-0 flex-1 justify-start px-1 py-0 text-left text-sm font-normal leading-normal hover:bg-transparent"
                     onClick={() => toggleWorkspace(workspace.id)}
                   >
-                    <span className="block min-w-0 truncate">{workspace.nodeHost}</span>
+                    <span className="block min-w-0 truncate">{workspace.rpcEndpoint}</span>
                   </Button>
                 )}
                 {!workspaceEditing ? (

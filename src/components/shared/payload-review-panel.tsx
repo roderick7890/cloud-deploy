@@ -1,6 +1,4 @@
 import type { DeploymentHashes } from "@/types/deploy";
-import { Button } from "@/components/ui/button";
-import { shortHash } from "@/utils/format-utils";
 
 type PayloadReviewPanelProps = {
   hashes: DeploymentHashes;
@@ -23,9 +21,14 @@ export function PayloadReviewPanel({ hashes, payload, onCopy, onDownload }: Payl
         {hashLabels
           .filter(([key]) => hashes[key])
           .map(([key, label]) => (
-            <div key={key} className="min-w-0 flex-1 basis-72 rounded-md border bg-card p-3">
-              <p className="text-caption text-muted-foreground">{label}</p>
-              <p className="font-mono text-sm">{shortHash(hashes[key])}</p>
+            // <div key={key} className="min-w-0 flex-1 basis-72 rounded-md border bg-card p-3">
+            //   <p className="text-caption text-muted-foreground">{label}</p>
+            //   <p className="font-mono text-sm">{shortHash(hashes[key])}</p>
+            // </div>
+
+            <div key={key} className="flex flex-col flex-1">
+              <p className="font-medium text-sm text-muted-foreground/80 mb-1">{label}</p>
+              <p className="">{(hashes[key])}</p>
             </div>
           ))}
       </div>
@@ -34,14 +37,14 @@ export function PayloadReviewPanel({ hashes, payload, onCopy, onDownload }: Payl
           <pre className="w-max min-w-full whitespace-pre text-sm">{JSON.stringify(payload, null, 2)}</pre>
         </div>
       </div>
-      <div className="flex justify-end gap-2">
+      {/* <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCopy}>
           Copy JSON
         </Button>
         <Button type="button" onClick={onDownload}>
           Download JSON
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }

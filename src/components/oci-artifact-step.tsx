@@ -1,7 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
-import { CircleHelp, LoaderCircle } from "lucide-react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, CircleHelp, LoaderCircle } from "lucide-react";
 import type { AbiParameter } from "viem";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +41,41 @@ function getRawRecord(artifact: LyquidDeploymentArtifact | null) {
   return artifact?.raw && typeof artifact.raw === "object" ? (artifact.raw as Record<string, unknown>) : {};
 }
 
+function getRecord(value: unknown) {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+type FoldSectionProps = {
+  title: ReactNode;
+  hint?: string;
+  ariaLabel?: string;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+};
+
+function FoldSection({ title, hint, ariaLabel, open, onToggle, children }: FoldSectionProps) {
+  const Icon = open ? ChevronDown : ChevronRight;
+
+  return (
+    <section className="[&:not(:last-child)]:border-b py-4 [&:first-of-type]:pt-0">
+      <Button
+        type="button"
+        variant="ghost"
+        aria-expanded={open}
+        aria-label={ariaLabel ?? (typeof title === "string" && hint ? `${title} ${hint}` : undefined)}
+        onClick={onToggle}
+        className="w-full justify-start gap-2 rounded-sm px-1 py-1 text-left"
+      >
+        <Icon className="size-4 shrink-0" />
+        <span className="font-medium">{title}</span>
+        {hint ? <span className="truncate text-caption text-muted-foreground">{hint}</span> : null}
+      </Button>
+      {open ? <div className="pt-3 px-7">{children}</div> : null}
+    </section>
+  );
+}
+
 export function OciArtifactStep({
   rpcEndpoint,
   bartenderAddress,
@@ -63,12 +97,16 @@ export function OciArtifactStep({
   onConstructorValuesChange
 }: OciArtifactStepProps) {
   const [updateLyquidId, setUpdateLyquidId] = useState("");
+  const [isArtifactOpen, setIsArtifactOpen] = useState(false);
+  const [isRawDetailsOpen, setIsRawDetailsOpen] = useState(false);
+  const [isDeployOpen, setIsDeployOpen] = useState(true);
   const pushCommandRef = useRef<HTMLTextAreaElement>(null);
   const raw = getRawRecord(artifact);
+  const metadata = getRecord(raw.metadata);
   const manifestJson = jsonText(raw.manifest);
   const metadataJson = jsonText(raw.metadata);
-  const contractAbiJson = artifact?.contractAbi ? jsonText(artifact.contractAbi) : "";
   const canDeploy = Boolean(artifact && bartenderAddress && !isLoading && !isDeploying);
+  void metadata;
 
   useLayoutEffect(() => {
     const textarea = pushCommandRef.current;
@@ -169,110 +207,124 @@ export function OciArtifactStep({
       ) : null}
 
       {artifact ? (
-        <div className="flex  gap-4">
-          <section className="flex-2 flex flex-col gap-4 rounded-md border bg-card p-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-medium">{artifact.name}</p>
-              <Badge variant="outline">{artifact.repoHint}</Badge>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-caption text-muted-foreground">imageHash</p>
-                <p className="break-all font-mono text-sm">{artifact.imageHash}</p>
-              </div>
-              <div className="rounded-md border bg-background p-3">
-                <p className="text-caption text-muted-foreground">constructor</p>
-                <p className="break-all font-mono text-sm">{artifact.abiStr || "()"}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="oci-manifest-json">Manifest JSON</Label>
-              <Textarea id="oci-manifest-json" aria-label="Manifest JSON" value={manifestJson} readOnly rows={12} className="w-full font-mono" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="oci-metadata-json">Metadata JSON</Label>
-              <Textarea id="oci-metadata-json" aria-label="Metadata JSON" value={metadataJson} readOnly rows={10} className="w-full font-mono" />
-            </div>
-          </section>
-
-          <section className="flex-1 flex flex-col gap-4 rounded-md border bg-card p-4 h-fit">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <Label htmlFor="oci-deployment-bytecode">Deployment Bytecode</Label>
-                  {!bartenderAddress ? <p className="text-sm text-destructive">Bartender Address is required before deploy.</p> : null}
+        <div className="flex flex-col">
+          <FoldSection title="Artifact" ariaLabel="Toggle Artifact" open={isArtifactOpen} onToggle={() => setIsArtifactOpen((value) => !value)}>
+            <div className="space-y-4">
+              <div className="space-y-4">
+                <div className="flex flex-col flex-1">
+                  <p className="font-medium text-sm text-muted-foreground/80 mb-1">Name</p>
+                  <p className="max-w-[80%] break-all">{artifact.name}</p>
+                </div>
+                <div className="flex flex-col flex-1">
+                  <p className="font-medium text-sm text-muted-foreground/80 mb-1">ImageHash</p>
+                  <p className="max-w-[80%] break-all">{artifact.imageHash}</p>
+                </div>
+                <div className="flex flex-col flex-1">
+                  <p className="font-medium text-sm text-muted-foreground/80 mb-1">Constructor</p>
+                  <p className="">{artifact.abiStr || "()"}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="font-medium text-sm text-muted-foreground/80 mb-1">Deployment Bytecode</p>
+                  <Textarea
+                    id="oci-deployment-bytecode"
+                    aria-label="Deployment Bytecode"
+                    value={artifact.deploymentBytecode}
+                    readOnly
+                    rows={4}
+                    className="w-full font-mono"
+                  />
                 </div>
               </div>
-              <Textarea
-                id="oci-deployment-bytecode"
-                aria-label="Deployment Bytecode"
-                value={artifact.deploymentBytecode}
-                readOnly
-                rows={12}
-                className="w-full font-mono"
-              />
-              <div className="space-y-2 mt-4">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="oci-update-lyquid-id">Update to (optional)</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button className="size-6" type="button" variant="ghost" size="icon" aria-label="Explain update deployment">
-                          <CircleHelp className="size-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        Fill a Lyquid ID to update that existing Lyquid. Cloud Deploy uses the node update path, but does not verify this code matches the target. Check it yourself before deploying.
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <Input
-                  className="w-full"
-                  id="oci-update-lyquid-id"
-                  value={updateLyquidId}
-                  placeholder="Lyquid-*"
-                  onChange={(event) => setUpdateLyquidId(event.target.value)}
-                />
-              </div>
             </div>
+          </FoldSection>
 
-            {contractAbiJson ? (
+          <FoldSection
+            title="Raw artifact details"
+            ariaLabel="Toggle Raw artifact details"
+            open={isRawDetailsOpen}
+            onToggle={() => setIsRawDetailsOpen((value) => !value)}
+          >
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="oci-contract-abi">Contract ABI</Label>
-                <Textarea id="oci-contract-abi" value={contractAbiJson} readOnly rows={8} className="w-full font-mono" />
+                <p className="font-medium text-sm text-muted-foreground/80 mb-1">Manifest JSON</p>
+                <Textarea id="oci-manifest-json" aria-label="Manifest JSON" value={manifestJson} readOnly rows={12} className="w-full font-mono" />
               </div>
-            ) : null}
-
-            {artifact.constructorParameters.length > 0 ? (
-              <div className="space-y-3">
-                <p className="font-medium">Constructor</p>
-                {artifact.constructorParameters.map((field, index) => {
-                  const name = getFieldName(field, index);
-
-                  return (
-                    <div key={`${name}:${field.type}`} className="space-y-1">
-                      <Label htmlFor={`oci-constructor-${name}`}>{name}</Label>
-                      <Input
-                        id={`oci-constructor-${name}`}
-                        className="w-full"
-                        value={constructorValues[name] ?? ""}
-                        placeholder={field.type}
-                        onChange={(event) => onConstructorValuesChange?.({ ...constructorValues, [name]: event.target.value })}
-                      />
-                    </div>
-                  );
-                })}
+              <div className="space-y-2">
+                <p className="font-medium text-sm text-muted-foreground/80 mb-1">Metadata JSON</p>
+                <Textarea id="oci-metadata-json" aria-label="Metadata JSON" value={metadataJson} readOnly rows={10} className="w-full font-mono" />
               </div>
-            ) : null}
-
-            <div className="flex justify-end">
-              <Button type="button" disabled={!canDeploy} onClick={() => onDeploy(updateLyquidId.trim() || undefined)} className="mt-4">
-                {isDeploying ? "Deploying..." : "Deploy"}
-              </Button>
             </div>
-          </section>
+          </FoldSection>
+
+
+          <FoldSection
+            title={!bartenderAddress ? <div className="flex items-center gap-2"><p className="text-lg font-medium">Deploy</p><p className="text-sm text-destructive">Bartender Address is required before deploy.</p></div> : "Deploy"}
+            ariaLabel="Toggle Deploy"
+            open={isDeployOpen}
+            onToggle={() => setIsDeployOpen((value) => !value)}
+          >
+            <div className="space-y-4">
+              <div className="space-y-4">
+                {artifact.constructorParameters.length > 0 ? (
+                  <div className="">
+                    <p className="font-medium text-sm text-muted-foreground/80 mb-1">Constructor</p>
+                    {artifact.constructorParameters.map((field, index) => {
+                      const name = getFieldName(field, index);
+
+                      return (
+                        <div key={`${name}:${field.type}`} className="space-y-1 ">
+                          {/* <Label htmlFor={`oci-constructor-${name}`}>{name}</Label> */}
+                          <p className="font-medium text-sm text-muted-foreground/80 mb-1">{name}</p>
+                          <Input
+                            id={`oci-constructor-${name}`}
+                            className="w-full"
+                            value={constructorValues[name] ?? ""}
+                            placeholder={field.type}
+                            onChange={(event) => onConstructorValuesChange?.({ ...constructorValues, [name]: event.target.value })}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : "null"}
+              </div>
+
+
+              <hr className="my-6" />
+              <div className="flex flex-col gap-2">
+                <div className="space-y-2 max-w-md w-full ">
+                  <div className="flex items-center gap-1 text-muted-foreground/80 ">
+                    <Label htmlFor="oci-update-lyquid-id" className="font-medium text-sm mb-1">Update to (optional)</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button className="size-6" type="button" variant="ghost" size="icon" aria-label="Explain update deployment">
+                            <CircleHelp className="size-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          Fill a Lyquid ID to update that existing Lyquid. Cloud Deploy uses the node update path, but does not verify this code matches the target. Check it yourself before deploying.
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <Input
+                    className="w-full"
+                    id="oci-update-lyquid-id"
+                    value={updateLyquidId}
+                    placeholder="Lyquid-*"
+                    onChange={(event) => setUpdateLyquidId(event.target.value)}
+                  />
+                </div>
+
+                <div className="flex justify-start">
+                  <Button type="button" disabled={!canDeploy} onClick={() => onDeploy(updateLyquidId.trim() || undefined)} className="mt-4">
+                    {isDeploying ? "Deploying..." : "Deploy"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </FoldSection>
         </div>
       ) : null}
     </div>

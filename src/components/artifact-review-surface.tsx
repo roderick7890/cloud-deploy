@@ -6,6 +6,7 @@ type ArtifactReviewSurfaceProps = {
   buildResult: BuildResult | null;
   deployResult: DeployResult | null;
   contractAbi?: unknown;
+  nodeHost?: string;
   isDeploying: boolean;
   isWalletConnected: boolean;
   currentError: string | null;
@@ -18,6 +19,7 @@ export function ArtifactReviewSurface({
   buildResult,
   deployResult,
   contractAbi,
+  nodeHost,
   isDeploying,
   isWalletConnected,
   currentError,
@@ -30,6 +32,7 @@ export function ArtifactReviewSurface({
       buildResult={buildResult}
       deployResult={deployResult}
       contractAbi={contractAbi}
+      nodeHost={nodeHost}
       isDeploying={isDeploying}
       isWalletConnected={isWalletConnected}
       currentError={currentError}

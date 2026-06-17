@@ -365,6 +365,7 @@ export default function ArtifactsPage() {
                 buildResult={buildResult}
                 deployResult={deployResult}
                 contractAbi={contractAbi}
+                nodeHost={selectedWorkspace?.nodeHost}
                 isDeploying={isDeploying}
                 isWalletConnected={Boolean(account.address)}
                 currentError={currentError}

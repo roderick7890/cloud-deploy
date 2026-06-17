@@ -7,7 +7,8 @@ import { OciArtifactStep } from "./oci-artifact-step";
 import { ReviewStep } from "./review-step";
 
 describe("ReviewStep and DeployStep", () => {
-  it("renders review payload actions", () => {
+  it("renders review payload actions", async () => {
+    const user = userEvent.setup();
     renderWithProviders(
       <ReviewStep
         buildResult={{ hashes: { sourceHash: "0x1234567890abcdef" }, logs: [], payload: { ok: true }, raw: { ok: true } }}
@@ -24,13 +25,15 @@ describe("ReviewStep and DeployStep", () => {
 
     expect(screen.getByText("Deployment Data")).toBeInTheDocument();
     expect(screen.getByText("Deploy Result")).toBeInTheDocument();
-    expect(screen.getByText("Copy JSON")).toBeInTheDocument();
-    expect(screen.getByText("Download JSON")).toBeInTheDocument();
+    expect(screen.queryByText('"ok": true')).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Deployment Data" }));
+    expect(screen.getByText("sourceHash")).toBeInTheDocument();
+    expect(screen.getByText(/"ok": true/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Deploy" })).toBeInTheDocument();
-    expect((screen.getByLabelText("Contract ABI") as HTMLTextAreaElement).value).toContain('"name": "increment"');
   });
 
-  it("renders build and deploy loading states in review", () => {
+  it("renders build and deploy loading states in review", async () => {
+    const user = userEvent.setup();
     renderWithProviders(
       <ReviewStep
         buildResult={null}
@@ -47,8 +50,32 @@ describe("ReviewStep and DeployStep", () => {
       />
     );
 
+    expect(screen.queryByText("Preparing...")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Deployment Data" }));
     expect(screen.getByText("Preparing...")).toBeInTheDocument();
     expect(screen.getByText("Deploying...")).toBeInTheDocument();
+  });
+
+  it("links transaction hashes through the selected node host", () => {
+    renderWithProviders(
+      <ReviewStep
+        buildResult={{ hashes: { sourceHash: "0x1234567890abcdef" }, logs: [], payload: { ok: true }, raw: { ok: true } }}
+        deployResult={{
+          transactionHash: "0xabc123",
+          raw: { ok: true },
+          transactionRaw: { transactionHash: "0xabc123" }
+        }}
+        nodeHost="node.example"
+        isWalletConnected
+        onCopyBuild={vi.fn()}
+        onDownloadBuild={vi.fn()}
+        onCopyAbi={vi.fn()}
+        onConnectWallet={vi.fn()}
+        onDeploy={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole("link", { name: "0xabc123" })).toHaveAttribute("href", "https://node.example/lyquor/txs/0xabc123");
   });
 
   it("renders connect wallet in the deploy result card when disconnected", async () => {
