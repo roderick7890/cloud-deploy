@@ -265,10 +265,11 @@ export function OciArtifactStep({
           >
             <div className="space-y-4">
               <div className="space-y-4">
-                {artifact.constructorParameters.length > 0 ? (
-                  <div className="">
-                    <p className="font-medium text-sm text-muted-foreground/80 mb-1">Constructor</p>
-                    {artifact.constructorParameters.map((field, index) => {
+
+                <div className="">
+                  <p className="font-medium text-sm text-muted-foreground/80 mb-1">Constructor</p>
+                  {artifact.constructorParameters.length > 0 ? (
+                    artifact.constructorParameters.map((field, index) => {
                       const name = getFieldName(field, index);
 
                       return (
@@ -284,9 +285,10 @@ export function OciArtifactStep({
                           />
                         </div>
                       );
-                    })}
-                  </div>
-                ) : "null"}
+                    })
+                  ) : "null"}
+                </div>
+
               </div>
 
 
